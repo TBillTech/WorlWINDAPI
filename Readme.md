@@ -1,11 +1,11 @@
-# World Wide Anthropomorphic Tree Protocol
+# World Wide Introspective Namespace Dendron Protocol
 
-The World Wide Anthropomorphic Tree Protocol (WWATP) is an agent communication layer on top of QUIC. Each end-point conceptually contains a "growing" tree. In general, trees can grow in several ways:
+The World Wide Introspective Namespace Dendron (WorlWIND) Protocol is an agent communication layer on top of HTTP3 aware sockets (or plain socket). Each end-point conceptually contains a "growing" tree. In general, trees can grow in several ways:
 - New branches and/or leaves.
 - Pruned branches and/or leaves.
 - Mutations of branches and/or leaves.
 
-What makes this an _anthropomorphic_ tree protocol is that the description node references can be personality prompts to agents templated by the node label rule! And because queries can be agent-like string requests prompted by the Q&A of a node. Another way to look at this is to say that the literal API of clients and servers of the tree protocol is infrastructure only: the content API is implicit and based around LLM friendly two way discussions about capabilities and content descriptions.
+What makes this an _namespace_ dendron protocol is that the description node references can be personality prompts to agents templated by the node label rule! And because queries can be agent-like string requests prompted by the Q&A of a node. Another way to look at this is to say that the literal API of clients and servers of the tree protocol is infrastructure only: the content API is implicit and based around LLM friendly two way discussions about capabilities and content descriptions.
 
 ## Build and test
 
@@ -38,38 +38,9 @@ ctest --test-dir build-clang64 --output-on-failure
 
 Prerequisites (install via `pacman` in the clang64 shell): `mingw-w64-clang-x86_64-toolchain`, `mingw-w64-clang-x86_64-cmake`, `autoconf`, `automake`, `libtool`. **`libev` is not packaged for MinGW/clang64 in MSYS2** (only `libevent`, a different API) and must be built from source (`http://dist.schmorp.de/libev/`) with `./configure --prefix=/clang64 --host=x86_64-w64-mingw32 && make && make install`.
 
-The vendored `boringssl`, `ngtcp2`, and `nghttp3` under `libraries/` must be built manually before the top-level configure above will succeed (the top-level `ExternalProject_Add` steps assume these are already buildable/built):
-
-- **BoringSSL**: configure with `-DOPENSSL_NO_ASM=1`. This vendored snapshot has no Windows/PE variant of its ADX-optimized P-256 assembly (`fiat_p256_adx_mul`/`fiat_p256_adx_sqr`), so linking fails with those symbols undefined unless assembly is disabled entirely (a real perf tradeoff worth revisiting upstream).
-  ```bash
-  cmake -S libraries/boringssl -B libraries/boringssl/build -G "MinGW Makefiles" \
-    -DCMAKE_C_COMPILER=/clang64/bin/clang -DCMAKE_CXX_COMPILER=/clang64/bin/clang++ \
-    -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DOPENSSL_NO_ASM=1
-  cmake --build libraries/boringssl/build --target ssl crypto
-  ```
-- **ngtcp2**: this vendored version's `./configure` supports `--with-boringssl` directly (no `.pc` file is produced by the BoringSSL build above, so point at it explicitly via `BORINGSSL_CFLAGS`/`BORINGSSL_LIBS`). `-lws2_32 -lwinpthread` are required in `BORINGSSL_LIBS` for Winsock and pthread-emulation symbols used by BoringSSL.
-  ```bash
-  cd libraries/ngtcp2
-  CC=clang CXX=clang++ AR=llvm-ar RANLIB=llvm-ranlib \
-  BORINGSSL_CFLAGS='-I<repo>/libraries/boringssl/include' \
-  BORINGSSL_LIBS='-L<repo>/libraries/boringssl/build -lssl -lcrypto -lws2_32 -lwinpthread' \
-  ./configure --host=x86_64-w64-mingw32 --with-boringssl --disable-shared --enable-static \
-    --disable-dependency-tracking
-  make
-  ```
-- **nghttp3**: crypto-agnostic; only needs `--enable-lib-only` to skip its POSIX-only (`arpa/inet.h`) example programs, which don't build on MinGW and aren't needed.
-  ```bash
-  cd libraries/nghttp3
-  CC=clang CXX=clang++ AR=llvm-ar RANLIB=llvm-ranlib \
-  ./configure --host=x86_64-w64-mingw32 --enable-lib-only --disable-shared --enable-static \
-    --disable-dependency-tracking
-  make
-  ```
-
 Notes:
 - `--disable-dependency-tracking` is required because clang64's `mingw32-make` doesn't set `$(MAKE)` the way these autotools scripts expect.
 - Avoid `make -j`: parallel jobs were observed to hang under this MSYS2 `make`/libtool combination; build serially.
-- `BUILD_WWATP_QUIC_C` is currently Linux-only in this build; on MinGW it fails at configure time with remediation guidance instead of failing later at link/runtime.
 
 ## Client and Server instances and ecosystem
 
@@ -193,8 +164,8 @@ The following backends are tested in the project:
 
 Currently, the following backends are planned.  Note these usually assume an underlying backend, not a direct implementation:
 * NOT GOING TO IMPLEMENT: JournalingBackend: because as far as I know only the http3_client needs this, and only the http3_server_cpp supports this.  So rather than build journaling into the most general backend interface, the journaling concept will be implemented along with http3 and the usage of the transport layer.
-* PostGRES Backend: Will also be a standalone implementation, and will present a PostGRES database as a Tree using the Backend interface.  But this will be developed in a separate project, not in WWATP project.
-* HTTP3Client Backend (Both cpp and javascript): Will keep a current cached tree, and track changes to it via journaling, and connect to a http3_server_cpp instance which can support querying the journal, and fast fowarding changes.
+* PostGRES Backend: Will also be a standalone implementation, and will present a PostGRES database as a Tree using the Backend interface.  But this will be developed in a separate project, not in WorlWIND project.
+* HTTP3Client Backend: Will keep a current cached tree, and track changes to it via journaling, and connect to a http3_server_cpp instance which can support querying the journal, and fast fowarding changes.
 
 Terminology for frontend capabilities:
 * A Watcher has a Context and waits for a change on the input, and then regenerates the output (for example, a file, or another tree).
