@@ -1,0 +1,28 @@
+# Ignore libraries
+libraries/
+
+# Ignore build directory
+build/
+build-contract-default/
+build-quic-off/
+build-mingw
+build-clang64
+
+# Ignore Visual Studio Code settings
+.vscode/
+
+# Ignore .claude files
+.claude/
+.mcp.json
+
+# Ignore sandbox directory
+sandbox/
+
+# Ignore .pem files
+*.pem
+
+# Ignore other common files
+*.log
+*.tmp
+*.swp
+.DS_Store

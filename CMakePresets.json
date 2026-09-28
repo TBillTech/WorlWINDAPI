@@ -1,0 +1,35 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": { "major": 3, "minor": 20, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "clang64",
+      "displayName": "Clang64 (msys64 @ d:/code/msys64)",
+      "generator": "MinGW Makefiles",
+      "binaryDir": "${sourceDir}/build-clang64",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "d:/code/msys64/clang64/bin/clang.exe",
+        "CMAKE_CXX_COMPILER": "d:/code/msys64/clang64/bin/clang++.exe",
+        "CMAKE_MAKE_PROGRAM": "d:/code/msys64/clang64/bin/mingw32-make.exe",
+        "CMAKE_PREFIX_PATH": "d:/code/msys64/clang64"
+      },
+      "environment": {
+        "PATH": "d:/code/msys64/clang64/bin;d:/code/msys64/usr/bin;$penv{PATH}"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "clang64",
+      "configurePreset": "clang64"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "clang64",
+      "configurePreset": "clang64",
+      "output": { "outputOnFailure": true }
+    }
+  ]
+}
