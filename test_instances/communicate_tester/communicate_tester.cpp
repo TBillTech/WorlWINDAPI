@@ -13,11 +13,6 @@
 #include "shared_chunk.h"
 #include "tcp_communication.h"
 
-#if WWATP_USE_QUIC_TRANSPORT
-#include "quic_connector.h"
-#include "quic_listener.h"
-#endif
-
 using namespace std;
 
 namespace {
@@ -42,21 +37,11 @@ YAML::Node quicConfig() {
 }
 
 unique_ptr<Communication> makeServer(const string& protocol, boost::asio::io_context& io) {
-#if WWATP_USE_QUIC_TRANSPORT
-    if (protocol == "QUIC") {
-        return make_unique<QuicListener>(io, quicConfig());
-    }
-#endif
     require(protocol == "TCP", "TCP transport is unavailable");
     return make_unique<TcpCommunication>(io);
 }
 
 unique_ptr<Communication> makeClient(const string& protocol, boost::asio::io_context& io) {
-#if WWATP_USE_QUIC_TRANSPORT
-    if (protocol == "QUIC") {
-        return make_unique<QuicConnector>(io, quicConfig());
-    }
-#endif
     require(protocol == "TCP", "TCP transport is unavailable");
     return make_unique<TcpCommunication>(io);
 }
@@ -166,9 +151,6 @@ int main() {
         }
     };
     run("TCP", tcp_port);
-#if WWATP_USE_QUIC_TRANSPORT
-    run("QUIC", quic_port);
-#endif
     if (result == 0) {
         cout << "Communication contract tests passed" << endl;
     }

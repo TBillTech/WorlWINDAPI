@@ -8,16 +8,11 @@
 #include <map>
 #include <span>
 #include <utility>
-#include <ngtcp2/ngtcp2.h> // Add this line to include the ngtcp2_cid type
 
-#include "config_base.h"
 #include "shared_chunk.h"
+#include "request.h"
 
-// Deliberately no `using namespace std;` here: this header is included very widely
-// (including transitively before <boost/asio.hpp> in some translation units), and a
-// namespace-scope using-directive here can make Windows SDK headers pulled in later
-// ambiguous against std:: names (e.g. byte vs std::byte). Use std:: explicitly below.
-
+using namespace std;
 // Server and Client Connection IDs:
 //
 // The server primarily uses the dcid (Destination Connection ID) to identify incoming connections.
@@ -38,6 +33,20 @@
 // Each Stream object is responsible for handling the data and state associated with a specific stream within the connection.
 //
 // This design allows the server to efficiently manage multiple connections and streams, with each Handler object managing a single connection and each Stream object managing a single stream within that connection.
+
+const size_t NGTCP2_MAX_CIDLEN = 8; 
+
+struct ngtcp2_cid {
+    size_t datalen = 0;
+    uint8_t data[NGTCP2_MAX_CIDLEN] = {0,0,0,0,0,0,0,0};
+};
+
+ostream &operator<<(ostream &os, const ngtcp2_cid &cid);
+bool operator<=(ngtcp2_cid const &cid_A, ngtcp2_cid const &cid_B);
+bool operator>=(ngtcp2_cid const &cid_A, ngtcp2_cid const &cid_B);
+bool operator==(ngtcp2_cid const &cid_A, ngtcp2_cid const &cid_B);
+bool operator<(ngtcp2_cid const &cid_A, ngtcp2_cid const &cid_B);
+bool operator>(ngtcp2_cid const &cid_A, ngtcp2_cid const &cid_B);
 
 class StreamIdentifier {
     public:
@@ -60,7 +69,6 @@ class StreamIdentifier {
 
 
     bool operator<(const StreamIdentifier& other) const {
-        using namespace ngtcp2;
         if (cid < other.cid) {
             return true;
         }
@@ -71,12 +79,10 @@ class StreamIdentifier {
     }
 
     bool operator==(const StreamIdentifier& other) const {
-        using namespace ngtcp2;
         return cid == other.cid && logical_id == other.logical_id;
     }
 
     friend std::ostream& operator<<(std::ostream& os, const StreamIdentifier& si) {
-        using namespace ngtcp2;
         os << "StreamIdentifier: cid=" << si.cid << ", logical_id=" << si.logical_id;
         return os;
     }

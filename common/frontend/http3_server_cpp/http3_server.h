@@ -1,9 +1,9 @@
 #pragma once
 
 #include "backend.h"
-#include "quic_listener.h"
 #include "http3_tree_message.h"
 #include "frontend_base.h"
+#include "communication.h"
 
 // This HTTP3Server class does not need to perform authentication or authorization, because that job will be handled by the
 // HTTP3Authenticator service, which stands between clients and these HTTP3Server instances.  The job of the HTTP3Authenticator
