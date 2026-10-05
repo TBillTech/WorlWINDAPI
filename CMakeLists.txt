@@ -102,6 +102,7 @@ set(COMMON_SOURCES
     ${PROJECT_SOURCE_DIR}/common/transport/src/shared_chunk.cpp
     ${PROJECT_SOURCE_DIR}/common/transport/src/urlparse.c
     ${PROJECT_SOURCE_DIR}/common/transport/src/communication.cpp
+    ${PROJECT_SOURCE_DIR}/common/transport/src/socket_communication.cpp
     ${PROJECT_SOURCE_DIR}/common/backend_cpp/interface/tree_node.cpp
     ${PROJECT_SOURCE_DIR}/common/backend_cpp/memory/src/memory_tree.cpp
     ${PROJECT_SOURCE_DIR}/common/backend_cpp/memory/src/simple_backend.cpp
