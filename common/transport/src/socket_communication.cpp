@@ -366,16 +366,44 @@ void SocketCommunication::listen(const std::string &local_name, const std::strin
     send_thread_ = thread([this, local_name, local_ip_addr, local_port]()
                             {
         try {
+            boost::system::error_code error;
             while (!terminate_.load()) {
-                // TODO: send and recv messages, for
-                // size_t length = socket.read_some(boost::asio::buffer(data), error);
-                // std::string message(data, length);
-                // boost::asio::write(socket, boost::asio::buffer(message), error);
-                // if (error == boost::asio::error::eof) {
-                //     std::cout << "Client disconnected cleanly." << std::endl;
-                // } else if (error) {
-                //     throw boost::system::system_error(error);
-                // }
+                outgoingMessageWait();
+                unique_lock<mutex> responderLock(responderQueueMutex);
+                for (auto it = outgoingChunks.begin(); it != outgoingChunks.end(); ++it)
+                {
+                    if (it->second.empty())
+                        continue;
+                    StreamIdentifier const & currentSid = it->first;
+                    //It should be unecessary to look up the Request because the client should track this in the returnPaths
+                    {   // cid
+                        TypeLength payloadType = toTL(TLVType::CID, sizeof(currentSid.cid));
+                        boost::asio::write(socket, boost::asio::buffer(&payloadType, sizeof(payloadType)), error);
+                        if (error) { throw boost::system::system_error(error); }
+                        boost::asio::write(socket, boost::asio::buffer(&currentSid.cid, sizeof(currentSid.cid)), error);
+                        if (error) { throw boost::system::system_error(error); }
+                    }
+                    {   // logicalID
+                        TypeLength payloadType = toTL(TLVType::LogicalID, sizeof(currentSid.logical_id));
+                        boost::asio::write(socket, boost::asio::buffer(&payloadType, sizeof(payloadType)), error);
+                        if (error) { throw boost::system::system_error(error); }
+                        boost::asio::write(socket, boost::asio::buffer(&currentSid.logical_id, sizeof(currentSid.logical_id)), error);
+                        if (error) { throw boost::system::system_error(error); }
+                    }
+                    {   // chunks
+                        for(auto chunk_it = it->second.begin(); chunk_it != it->second.end(); chunk_it++)
+                        {
+                            shared_span<> const & chunk = *chunk_it;
+                            TypeLength payloadType = toTL(TLVType::Chunk, chunk.use_chunk_size());
+                            boost::asio::write(socket, boost::asio::buffer(&payloadType, sizeof(payloadType)), error);
+                            if (error) { throw boost::system::system_error(error); }
+                            boost::asio::write(socket, boost::asio::buffer(chunk.use_chunk(), chunk.use_chunk_size()), error);
+                            if (error) { throw boost::system::system_error(error); }
+                        }
+                        // And this is where the outoing chunks are consumed.
+                        it->second.clear();
+                    }
+                }
             }
         } catch (std::exception& e) {
             std::cerr << "Server Exception: " << e.what() << std::endl;

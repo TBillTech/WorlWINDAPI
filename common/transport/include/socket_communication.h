@@ -49,6 +49,7 @@ private:
     void terminate() {
         // Set the terminate flag
         terminate_.store(true);
+        outgoingMessageCV.notify_one();
 
         // Wait for the threads to finish
         if (send_thread_.joinable()) {
@@ -61,7 +62,13 @@ private:
 
     void outgoingMessageWait() {
         std::unique_lock<std::mutex> lock(outgoingChunksMutex);
-        outgoingMessageCV.wait(lock, [&] { return hasOutgoingMessages(); });
+        outgoingMessageCV.wait(lock, [&] { return stopWaiting(); });
+    }
+
+    bool stopWaiting() {
+        if(terminate_.load())
+            return true;
+        return hasOutgoingMessages();
     }
 
     bool hasOutgoingMessages() {
