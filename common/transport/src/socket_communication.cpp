@@ -1,5 +1,6 @@
 #include <cstring>
 #include <iostream>
+#include <stdexcept>
 #include <unistd.h>
 
 #include "socket_communication.h"
@@ -173,9 +174,8 @@ bool SocketCommunication::processRequestStream()
                 outgoingChunks.erase(stream_cb.first);
             }
             {
-                // TODO: Garbage collect old unsused returnPaths
-                //lock_guard<std::mutex> lock(returnPathsMutex);
-                //returnPaths.erase(stream_cb.first);
+                lock_guard<std::mutex> lock(returnPathsMutex);
+                returnPaths.erase(stream_cb.first);
                 // Don't erase from the staticRequests though
             }
             // And by definition, it is not in the requestorQueue anymore
@@ -280,9 +280,8 @@ bool SocketCommunication::processResponseStream()
                 outgoingChunks.erase(stream_cb.first);
             }
             {
-                // TODO: garbage collect old unused return paths
-                //lock_guard<std::mutex> lock(returnPathsMutex);
-                //returnPaths.erase(stream_cb.first);
+                lock_guard<std::mutex> lock(returnPathsMutex);
+                returnPaths.erase(stream_cb.first);
             }
             // And by definition, it is not in the requestorQueue anymore
         }
@@ -308,7 +307,7 @@ void SocketCommunication::listen(const std::string &local_name, const std::strin
     std::cout << "Client connected from: " << socket.remote_endpoint() << std::endl;
 
     recv_thread_ = thread([this]()
-                            {
+    {
         try {
             Request currentRequest;
             ngtcp2_cid init_cid({1, {1}});
@@ -348,7 +347,7 @@ void SocketCommunication::listen(const std::string &local_name, const std::strin
                     case TLVType::Chunk:
                         {
                             shared_span chunk(std::span<uint8_t>(payload.data(), payloadSize));
-                            route_chunk(currentRequest, currentSid, move(chunk));
+                            route_chunk_server(currentRequest, currentSid, move(chunk));
                         }
                         break;
                     case TLVType::Data:
@@ -363,8 +362,8 @@ void SocketCommunication::listen(const std::string &local_name, const std::strin
         }        
         return EXIT_SUCCESS; 
     });
-    send_thread_ = thread([this, local_name, local_ip_addr, local_port]()
-                            {
+    send_thread_ = thread([this]()
+    {
         try {
             boost::system::error_code error;
             while (!terminate_.load()) {
@@ -434,45 +433,155 @@ void SocketCommunication::connect(const std::string &peer_name, const std::strin
     // Create socket and establish the connection
     boost::asio::connect(socket, endpoints);
     std::cout << "SocketCommunicaton::connect: Connected to server successfully!" << std::endl << std::flush;
-    recv_thread_ = thread([this, peer_name, peer_ip_addr, peer_port]() 
-                            {
+    recv_thread_ = thread([this]() 
+    {
         try {
-
+            Request currentRequest;
+            ngtcp2_cid init_cid({1, {1}});
+            StreamIdentifier currentSid(init_cid, uint16_t{1});
             while (!terminate_.load()) {
-                // TODO: send and recv messages, for example
-                // boost::asio::write(socket, boost::asio::buffer(message));
-                // boost::system::error_code error;
-                // size_t reply_length = socket.read_some(boost::asio::buffer(reply), error);
-                // if (!error) {
-                //     std::cout << "Reply from server: ";
-                //     std::cout.write(reply, reply_length);
-                //     std::cout << std::endl;
-                // } else {
-                //     std::cerr << "Read error: " << error.message() << std::endl;
-                // }
-                
+                boost::system::error_code ec;
+                array<TypeLength, 1> tl_buffer;
+                size_t n = read(socket, boost::asio::buffer(tl_buffer), ec);
+                uint64_t payloadSize = asLength(tl_buffer[0]);
+                TLVType payloadType = tl_buffer[0].type;
+
+                std::vector<uint8_t> payload(payloadSize);
+
+                boost::asio::read(socket, boost::asio::buffer(payload));
+                switch(payloadType) {
+                    case TLVType::Scheme:
+                        currentRequest.scheme = string(payload.begin(), payload.end());
+                        break;
+                    case TLVType::Authority:
+                        currentRequest.authority = string(payload.begin(), payload.end());
+                        break;
+                    case TLVType::Path: 
+                        currentRequest.path = string(payload.begin(), payload.end());
+                        break;
+                    case TLVType::Method:
+                        currentRequest.method = string(payload.begin(), payload.end());
+                        break;
+                    case TLVType::Priority:
+                        currentRequest.pri = static_cast<decltype(currentRequest.pri)>(payload.front());
+                        break;
+                    case TLVType::CID:
+                        std::memcpy(&currentSid.cid, payload.data(), min(sizeof(currentSid.cid), payloadSize));
+                        break;
+                    case TLVType::LogicalID:
+                        std::memcpy(&currentSid.logical_id, payload.data(), min(sizeof(currentSid.logical_id), payloadSize));
+                        break;
+                    case TLVType::Chunk:
+                        {
+                            shared_span chunk(std::span<uint8_t>(payload.data(), payloadSize));
+                            Request req(currentRequest);
+                            {
+                                lock_guard<std::mutex> lock(returnPathsMutex);
+                                auto findit = returnPaths.find(currentSid);
+                                if(findit != returnPaths.end())
+                                    req = findit->second;
+                            }
+                            route_chunk(req, currentSid, move(chunk));
+                        }
+                        break;
+                    case TLVType::Data:
+                        cerr << "Raw Data grams not implemented. Discarding Data gram of size " << payloadSize << "." << endl << flush;
+                        break;
+                    default:
+                        cerr << "Unrecognized payload type " << toString(payloadType) << endl << flush;
+                }
             }
         } catch (std::exception& e) {
-            std::cerr << "Client Exception: " << e.what() << std::endl << std::flush;
-        }
-        return EXIT_SUCCESS;
+            std::cerr << "Server Exception: " << e.what() << std::endl;
+        }        
+        return EXIT_SUCCESS; 
     });    
-    send_thread_ = thread([this, peer_name, peer_ip_addr, peer_port]() 
-                            {
+    send_thread_ = thread([this]() 
+    {
         try {
+            boost::system::error_code error;
             while (!terminate_.load()) {
-                // TODO: send and recv messages, for example
-                // boost::asio::write(socket, boost::asio::buffer(message));
-                // boost::system::error_code error;
-                // size_t reply_length = socket.read_some(boost::asio::buffer(reply), error);
-                // if (!error) {
-                //     std::cout << "Reply from server: ";
-                //     std::cout.write(reply, reply_length);
-                //     std::cout << std::endl;
-                // } else {
-                //     std::cerr << "Read error: " << error.message() << std::endl;
-                // }
-                
+                outgoingMessageWait();
+                unique_lock<mutex> responderLock(responderQueueMutex);
+                for (auto it = outgoingChunks.begin(); it != outgoingChunks.end(); ++it)
+                {
+                    if (it->second.empty())
+                        continue;
+                    StreamIdentifier const & currentSid = it->first;
+                    Request currentRequest;
+                    {
+                        lock_guard<std::mutex> lock(returnPathsMutex);
+                        auto findit = returnPaths.find(currentSid);
+                        if(findit != returnPaths.end()) {
+                            currentRequest = findit->second;
+                        } else {
+                            throw std::runtime_error("Could not lookup request for stream indentifier.");
+                        }
+                    }
+                    {   // scheme
+                        TypeLength payloadType = toTL(TLVType::Scheme, currentRequest.scheme.size());
+                        boost::asio::write(socket, boost::asio::buffer(&payloadType, sizeof(payloadType)), error);
+                        if (error) { throw boost::system::system_error(error); }
+                        boost::asio::write(socket, boost::asio::buffer(currentRequest.scheme.data(), currentRequest.scheme.size()), error);
+                        if (error) { throw boost::system::system_error(error); }
+                    }
+                    {   // authority
+                        TypeLength payloadType = toTL(TLVType::Authority, currentRequest.authority.size());
+                        boost::asio::write(socket, boost::asio::buffer(&payloadType, sizeof(payloadType)), error);
+                        if (error) { throw boost::system::system_error(error); }
+                        boost::asio::write(socket, boost::asio::buffer(currentRequest.authority.data(), currentRequest.authority.size()), error);
+                        if (error) { throw boost::system::system_error(error); }
+                    }
+                    {   // path
+                        TypeLength payloadType = toTL(TLVType::Path, currentRequest.path.size());
+                        boost::asio::write(socket, boost::asio::buffer(&payloadType, sizeof(payloadType)), error);
+                        if (error) { throw boost::system::system_error(error); }
+                        boost::asio::write(socket, boost::asio::buffer(currentRequest.path.data(), currentRequest.path.size()), error);
+                        if (error) { throw boost::system::system_error(error); }
+                    }
+                    {   // method
+                        TypeLength payloadType = toTL(TLVType::Method, currentRequest.method.size());
+                        boost::asio::write(socket, boost::asio::buffer(&payloadType, sizeof(payloadType)), error);
+                        if (error) { throw boost::system::system_error(error); }
+                        boost::asio::write(socket, boost::asio::buffer(currentRequest.method.data(), currentRequest.method.size()), error);
+                        if (error) { throw boost::system::system_error(error); }
+                    }
+                    {   // priority
+                        size_t pri_length = sizeof(currentRequest.pri);
+                        TypeLength payloadType = toTL(TLVType::Priority, pri_length);
+                        boost::asio::write(socket, boost::asio::buffer(&payloadType, sizeof(payloadType)), error);
+                        if (error) { throw boost::system::system_error(error); }
+                        boost::asio::write(socket, boost::asio::buffer(&currentRequest.pri, pri_length), error);
+                        if (error) { throw boost::system::system_error(error); }
+                    }
+                    {   // cid
+                        TypeLength payloadType = toTL(TLVType::CID, sizeof(currentSid.cid));
+                        boost::asio::write(socket, boost::asio::buffer(&payloadType, sizeof(payloadType)), error);
+                        if (error) { throw boost::system::system_error(error); }
+                        boost::asio::write(socket, boost::asio::buffer(&currentSid.cid, sizeof(currentSid.cid)), error);
+                        if (error) { throw boost::system::system_error(error); }
+                    }
+                    {   // logicalID
+                        TypeLength payloadType = toTL(TLVType::LogicalID, sizeof(currentSid.logical_id));
+                        boost::asio::write(socket, boost::asio::buffer(&payloadType, sizeof(payloadType)), error);
+                        if (error) { throw boost::system::system_error(error); }
+                        boost::asio::write(socket, boost::asio::buffer(&currentSid.logical_id, sizeof(currentSid.logical_id)), error);
+                        if (error) { throw boost::system::system_error(error); }
+                    }
+                    {   // chunks
+                        for(auto chunk_it = it->second.begin(); chunk_it != it->second.end(); chunk_it++)
+                        {
+                            shared_span<> const & chunk = *chunk_it;
+                            TypeLength payloadType = toTL(TLVType::Chunk, chunk.use_chunk_size());
+                            boost::asio::write(socket, boost::asio::buffer(&payloadType, sizeof(payloadType)), error);
+                            if (error) { throw boost::system::system_error(error); }
+                            boost::asio::write(socket, boost::asio::buffer(chunk.use_chunk(), chunk.use_chunk_size()), error);
+                            if (error) { throw boost::system::system_error(error); }
+                        }
+                        // And this is where the outoing chunks are consumed.
+                        it->second.clear();
+                    }
+                }
             }
         } catch (std::exception& e) {
             std::cerr << "Client Exception: " << e.what() << std::endl << std::flush;
@@ -481,7 +590,55 @@ void SocketCommunication::connect(const std::string &peer_name, const std::strin
     });    
 }
 
+bool SocketCommunication::has_responder(Request const &r, StreamIdentifier const &sid)
+{
+    lock_guard<std::mutex> lock(returnPathsMutex);
+    auto findit = returnPaths.find(sid);
+    if(findit != returnPaths.end())
+        return true;
+    return false;
+}
+
+void SocketCommunication::route_chunk_server(Request const &r, StreamIdentifier const &sid, shared_span<> &&chunk)
+{
+    bool can_respond = has_responder(r, sid);
+    if(!can_respond)
+    {
+        unique_lock<std::mutex> preparerlock(preparerStackMutex);
+        for (auto &preparer : preparersStack) {
+            auto response = preparer.second(r);
+            preparerlock.unlock();
+            auto stream_callback = make_pair(sid, response.second);
+            auto response_info = response.first;
+            if (response_info.can_handle) {
+                if (!response_info.is_file)
+                {
+                    if (!response_info.is_live_stream)
+                    {
+                        throw std::runtime_error("Static handlers should not be handled as live streams in prepareHandler.");
+                    }
+                    {
+                        lock_guard<std::mutex> lock(responderQueueMutex);
+                        responderQueue.push_back(stream_callback);
+                    }
+                    {
+                        lock_guard<std::mutex> lock(returnPathsMutex);
+                        returnPaths.insert(make_pair(sid, r));
+                    }
+                }
+                can_respond = true;
+                break;
+            }
+        }
+    }
+
+    if(!can_respond)
+        throw std::runtime_error("Could not find or build response handler.");
+    route_chunk(r, sid, move(chunk));
+}
+
 void SocketCommunication::route_chunk(Request const &r, StreamIdentifier const &sid, shared_span<> &&chunk)
 {
-
+    lock_guard<std::mutex> lock(incomingChunksMutex);
+    incomingChunks[sid].push_back(move(chunk));
 }

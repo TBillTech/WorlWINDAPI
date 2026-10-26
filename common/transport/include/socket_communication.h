@@ -27,6 +27,7 @@ public:
     virtual void close() override;
     virtual void connect(const std::string &peer_name, const std::string& peer_ip_addr, int peer_port) override;
 
+    void route_chunk_server(Request const &r, StreamIdentifier const &sid, shared_span<> &&chunk);
     void route_chunk(Request const &r, StreamIdentifier const &sid, shared_span<> &&chunk);
 
     void receiveSignal(StreamIdentifier const& sid, shared_span<> && signal) {
@@ -79,6 +80,8 @@ private:
         }
         return false;
     }
+
+    bool has_responder(Request const &r, StreamIdentifier const &sid);
 
     std::atomic<uint16_t> static_stream_id_counter = 1; // Start from 1, and use odd IDs for static stream logical Ids
 

@@ -1,3 +1,8 @@
+---
+name: create-ticket
+description: create-ticket
+disable-model-invocation: true
+---
 # Create Ticket (GitHub Issue format)
 
 You are acting as the WWATP Architect agent, creating a GitHub Issue.  
