@@ -136,12 +136,14 @@ public:
     // Each StreamIdentifier also maps to one of the URL/Request
     // Thus, either the StreamIdentifier maps to a single open Stream, 
     //    OR the StreamIdentifier maps to a single URL/Request that can be used to open a new Stream.
+    // The workflow comments below assume a QUIC transport protocol, however, other transport protocols such as a socket
+    // can implement and emulate the same behavior. In these cases, the HTTP3 details are abstract/notional instead of precise.
     
     // NOTE: This means that sometimes the client will need to send a flush message to the server, which can just be a heartbeat signal. 
 
     // ## "client" side communication model: worker threads + HTTP3 IO thread
     // worker thread gets a StreamIdentifier from the Communication object by requesting a new StreamIdentifier for a URL/Request
-    // worker thread calls setupRequestCallback, which adds a mapping from the StreamIdentifier to the callback.
+    // worker thread calls registerResponseHandler, which adds a mapping from the StreamIdentifier to the callback.
     // worker thread calls processRequestStream, which handles incoming and outgoing chunks as arguments and returns to the callback.
     // HTTP3 IO thread checks if there are any outgoing chunks to send for a URL/Request and no open stream for it,
     //    and if so, HTTP3 IO thread creates a new open stream.
@@ -185,10 +187,6 @@ public:
     // this function to make the callback from a worker thread and take as much time as necessary without interrupting the 
     // Communication IO.
     virtual bool processResponseStream() = 0;
-
-    // send and receive deal with data coming in and going out on the streams
-    // virtual void send() = 0;
-    // virtual void receive() = 0;
 
     // Listen is for servicing the protocol server side.
     virtual void listen(const std::string &local_name, const std::string& local_ip_addr, int local_port) = 0;
