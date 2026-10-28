@@ -11,7 +11,7 @@
 #include <yaml-cpp/yaml.h>
 #include "communication.h"
 #include "shared_chunk.h"
-#include "tcp_communication.h"
+#include "socket_communication.h"
 
 using namespace std;
 
@@ -38,12 +38,12 @@ YAML::Node quicConfig() {
 
 unique_ptr<Communication> makeServer(const string& protocol, boost::asio::io_context& io) {
     require(protocol == "TCP", "TCP transport is unavailable");
-    return make_unique<TcpCommunication>(io);
+    return make_unique<SocketCommunication>(io);
 }
 
 unique_ptr<Communication> makeClient(const string& protocol, boost::asio::io_context& io) {
     require(protocol == "TCP", "TCP transport is unavailable");
-    return make_unique<TcpCommunication>(io);
+    return make_unique<SocketCommunication>(io);
 }
 
 void runContractTest(const string& protocol, int port) {

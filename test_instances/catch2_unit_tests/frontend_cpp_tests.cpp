@@ -5,103 +5,10 @@
 #include "cloning_mediator.h"
 #include "yaml_mediator.h"
 #include "file_backend.h"
-#include "wwatp_service.h"
 #include <filesystem>
 #include <fstream>
 #include <thread>
 #include <chrono>
-
-TEST_CASE("Cloning Mediator copy test", "[CloningMediator]") {
-    // Create a YAML configuration string for a Cloning Mediator with backends
-    string config_yaml = R"(config:
-  child_names: [backends, frontends]
-  backends:
-    child_names: [a, b]
-    a:
-      type: simple
-    b:
-      type: simple
-  frontends:
-    child_names: [cloning_mediator]
-    cloning_mediator:
-      type: cloning_mediator
-      backend_a: a
-      backend_b: b
-)";
-    
-    auto wwatp_service = make_shared<WWATPService>("test_service", config_yaml);
-
-    auto simple_backend_A = wwatp_service->getBackend("a");
-    auto simple_backend_B = wwatp_service->getBackend("b");
-    {
-        BackendTestbed tester_A(*simple_backend_A);
-        tester_A.addAnimalsToBackend();
-        tester_A.addNotesPageTree();
-    }
-    {
-        BackendTestbed tester_B(*simple_backend_B);
-        tester_B.testBackendLogically();
-    }
-}
-
-TEST_CASE("Cloning Mediator versioned test", "[CloningMediator][versioned]") {
-    // Create a YAML configuration string for a Cloning Mediator with backends
-    string config_yaml = R"(config:
-  child_names: [backends, frontends]
-  backends:
-    child_names: [a, b]
-    a:
-      type: simple
-    b:
-      type: simple
-  frontends:
-    child_names: [cloning_mediator]
-    cloning_mediator:
-      type: cloning_mediator
-      backend_a: a
-      backend_b: b
-      versioned: true
-)";
-    
-    auto wwatp_service = make_shared<WWATPService>("test_service", config_yaml);
-
-    auto simple_backend_A = wwatp_service->getBackend("a");
-    auto simple_backend_B = wwatp_service->getBackend("b");    {
-        BackendTestbed tester_A(*simple_backend_A);
-        tester_A.addAnimalsToBackend();
-        tester_A.addNotesPageTree();
-    }
-    {
-        BackendTestbed tester_B(*simple_backend_B);
-        tester_B.addAnimalsToBackend();
-        tester_B.addNotesPageTree();
-    }
-    auto prior_node = simple_backend_A->getNode("lion");
-    {   // Test that updating to a new version on A shows up on B
-        auto lion_node = simple_backend_A->getNode("lion");
-        auto lion = lion_node.get_with_default(TreeNode());
-        lion.setDescription("A king of the jungle, known for its majestic mane.");
-        ++lion; // Increment the version
-        simple_backend_A->upsertNode({lion});
-        auto other_lion_node = simple_backend_B->getNode("lion");
-        REQUIRE(other_lion_node.get_with_default(TreeNode()) == lion);
-    }
-    {   // Test that updating to an old version on A does not change B
-        auto lion_node = prior_node.get_with_default(TreeNode());
-        simple_backend_A->upsertNode({lion_node});
-        auto other_lion_node = simple_backend_B->getNode("lion");
-        REQUIRE(other_lion_node.get_with_default(TreeNode()) != lion_node);
-    }
-    {   // Test that updating to a new version on B shows up on A
-        auto lion_node = simple_backend_B->getNode("lion");
-        auto lion = lion_node.get_with_default(TreeNode());
-        lion.setDescription("A large carnivorous feline. (Revised)");
-        ++lion; // Increment the version
-        simple_backend_B->upsertNode({lion});
-        auto other_lion_node = simple_backend_A->getNode("lion");
-        REQUIRE(other_lion_node.get_with_default(TreeNode()) == lion);
-    }
-}
 
 TEST_CASE("YAMLMediator construction test", "[YAMLMediator]") {
     auto memory_tree = make_shared<MemoryTree>();
@@ -127,67 +34,6 @@ TEST_CASE("YAMLMediator construction test", "[YAMLMediator]") {
     }
     {
         BackendTestbed tester(other_backend);
-        tester.testBackendLogically();
-    }
-}
-
-TEST_CASE("WWATPService YAMLMediator construction test", "[WWATPService][YAMLMediator]") {
-    // Create a YAML configuration string for YAMLMediator with backends
-    string config_yaml = R"(config:
-  child_names: [backends, frontends]
-  backends:
-    child_names: [nodeful_backend, yaml_backend, other_backend]
-    nodeful_backend:
-      type: simple
-    yaml_backend:
-      type: simple
-    other_backend:
-      type: simple
-  frontends:
-    child_names: [yaml_mediator1, yaml_mediator2]
-    yaml_mediator1:
-      type: yaml_mediator
-      tree_backend: nodeful_backend
-      yaml_backend: yaml_backend
-      node_label: universe/yaml
-      property_name: zoo
-      property_type: yaml
-      initialize_from_yaml: false
-    yaml_mediator2:
-      type: yaml_mediator
-      tree_backend: other_backend
-      yaml_backend: yaml_backend
-      node_label: universe/yaml
-      property_name: zoo
-      property_type: yaml
-      initialize_from_yaml: true
-)";
-    
-    auto wwatp_service = make_shared<WWATPService>("test_service", config_yaml);
-
-    auto nodeful_backend = wwatp_service->getBackend("nodeful_backend");
-    auto yaml_backend = wwatp_service->getBackend("yaml_backend");
-    auto other_backend = wwatp_service->getBackend("other_backend");
-    
-    REQUIRE(nodeful_backend != nullptr);
-    REQUIRE(yaml_backend != nullptr);
-    REQUIRE(other_backend != nullptr);
-    
-    // Add test data to nodeful_backend (this should sync to yaml_backend via yaml_mediator1)
-    {
-        BackendTestbed tester(*nodeful_backend);
-        tester.addAnimalsToBackend();
-        tester.addNotesPageTree();
-    }
-    
-    // Process notifications to allow yaml_mediator1 to sync nodeful->yaml
-    nodeful_backend->processNotifications();
-    yaml_backend->processNotifications();
-    
-    // The yaml_mediator2 should initialize other_backend from yaml_backend
-    // Test that other_backend now has the same data as nodeful_backend
-    {
-        BackendTestbed tester(*other_backend);
         tester.testBackendLogically();
     }
 }

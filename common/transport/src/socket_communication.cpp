@@ -347,7 +347,7 @@ void SocketCommunication::listen(const std::string &local_name, const std::strin
                     case TLVType::Chunk:
                         {
                             shared_span chunk(std::span<uint8_t>(payload.data(), payloadSize));
-                            route_chunk_server(currentRequest, currentSid, move(chunk));
+                            route_chunk_server(currentRequest, currentSid, std::move(chunk));
                         }
                         break;
                     case TLVType::Data:
@@ -481,7 +481,7 @@ void SocketCommunication::connect(const std::string &peer_name, const std::strin
                                 if(findit != returnPaths.end())
                                     req = findit->second;
                             }
-                            route_chunk(req, currentSid, move(chunk));
+                            route_chunk(req, currentSid, std::move(chunk));
                         }
                         break;
                     case TLVType::Data:
@@ -634,11 +634,11 @@ void SocketCommunication::route_chunk_server(Request const &r, StreamIdentifier 
 
     if(!can_respond)
         throw std::runtime_error("Could not find or build response handler.");
-    route_chunk(r, sid, move(chunk));
+    route_chunk(r, sid, std::move(chunk));
 }
 
 void SocketCommunication::route_chunk(Request const &r, StreamIdentifier const &sid, shared_span<> &&chunk)
 {
     lock_guard<std::mutex> lock(incomingChunksMutex);
-    incomingChunks[sid].push_back(move(chunk));
+    incomingChunks[sid].push_back(std::move(chunk));
 }

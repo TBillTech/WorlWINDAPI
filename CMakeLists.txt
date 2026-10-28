@@ -186,6 +186,10 @@ include(CTest)
 include(Catch)
 
 # Link libraries (if any)
+set(WORLWIND_PLATFORM_LINK_LIBS)
+if(WIN32)
+    list(APPEND WORLWIND_PLATFORM_LINK_LIBS ws2_32)
+endif()
 set(WORLWIND_COMMON_LINK_LIBS
     ${Boost_LIBRARIES}
     FunctionalPlus::fplus
