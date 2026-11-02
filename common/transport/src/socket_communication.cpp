@@ -414,6 +414,11 @@ void SocketCommunication::listen(const std::string &local_name, const std::strin
 void SocketCommunication::close()
 {
     terminate_.store(true);
+    outgoingMessageCV.notify_all();
+    // The receive thread blocks in a synchronous read; shutting the socket down unblocks it.
+    boost::system::error_code ec;
+    socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+    socket.close(ec);
     if (send_thread_.joinable()) {
         send_thread_.join();
     }

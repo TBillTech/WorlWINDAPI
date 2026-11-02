@@ -60,10 +60,10 @@ bool operator==(ngtcp2_cid const &cid_A, ngtcp2_cid const &cid_B) {
 
 bool operator<(ngtcp2_cid const &cid_A, ngtcp2_cid const &cid_B)
 {
-    return cid_B <= cid_A;
+    return !(cid_B <= cid_A);
 }
 
 bool operator>(ngtcp2_cid const &cid_A, ngtcp2_cid const &cid_B)
 {
-    return cid_B >= cid_A;
+    return !(cid_A <= cid_B);
 }

@@ -1,6 +1,7 @@
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
+#include <exception>
 #include <iostream>
 #include <memory>
 #include <stdexcept>
@@ -64,8 +65,11 @@ void runContractTest(const string& protocol, int port) {
     const string expected = string("binary\n", 7) + string("\0\x01\x7f", 3);
 
     auto server_handler = [&server_received, &server_handler_called, &expected](const StreamIdentifier& sid, chunks& request) {
+        // Handlers are polled, so an empty batch just means no data has arrived yet.
+        if (request.empty()) {
+            return chunks{};
+        }
         server_handler_called = true;
-        require(!request.empty(), "server callback received no chunks");
         require(request.front().get_signal_type() == payload_chunk_header::GLOBAL_SIGNAL_TYPE,
                 "server callback lost the payload chunk header");
         require(request.front().get_signal<payload_chunk_header>().signal == payload_chunk_header::SIGNAL_WWATP_REQUEST_CONTINUE,
@@ -84,13 +88,32 @@ void runContractTest(const string& protocol, int port) {
         return make_pair(uri_response_info{true, true, false, 0}, server_handler);
     };
     server->registerRequestHandler(make_pair("contract", prepare));
-    server->listen("localhost", "127.0.0.1", port);
+    // SocketCommunication::listen blocks in accept until a client connects.
+    exception_ptr listen_error;
+    thread listen_thread([&]() {
+        try {
+            server->listen("localhost", "127.0.0.1", port);
+        } catch (...) {
+            listen_error = current_exception();
+        }
+    });
     this_thread::sleep_for(chrono::milliseconds(100));
-    client->connect("localhost", "127.0.0.1", port);
+    try {
+        client->connect("localhost", "127.0.0.1", port);
+    } catch (...) {
+        listen_thread.detach();
+        throw;
+    }
+    listen_thread.join();
+    if (listen_error) {
+        rethrow_exception(listen_error);
+    }
     this_thread::sleep_for(chrono::milliseconds(100));
 
     auto client_handler = [&client_received](const StreamIdentifier&, chunks& response) {
-        require(!response.empty(), "client callback received no response chunks");
+        if (response.empty()) {
+            return chunks{};
+        }
         require(response.front().get_signal_type() == payload_chunk_header::GLOBAL_SIGNAL_TYPE,
                 "client callback lost the response payload header");
         require(response.front().get_signal<payload_chunk_header>().signal == payload_chunk_header::SIGNAL_WWATP_RESPONSE_CONTINUE,
@@ -113,12 +136,12 @@ void runContractTest(const string& protocol, int port) {
     // The callback is the contract's producer; the first invocation creates the request.
     bool request_sent = false;
     client->deregisterResponseHandler(first_id);
-    client->registerResponseHandler(first_id, [&request_sent, &request](const StreamIdentifier&, chunks&) {
+    client->registerResponseHandler(first_id, [&request_sent, &request, &client_handler](const StreamIdentifier& sid, chunks& response) {
         if (!request_sent) {
             request_sent = true;
             return request;
         }
-        return chunks{};
+        return client_handler(sid, response);
     });
 
     for (int attempt = 0; attempt < 100 && !(server_received && client_received); ++attempt) {
