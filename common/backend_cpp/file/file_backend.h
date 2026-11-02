@@ -124,7 +124,7 @@ class FileBackend : public Backend {
         // A given label rule can have multiple watchers if it is associated with multiple directories or files.
         std::map<FullWatchSpecifier, WatchHandle> watchchain_to_wd_; // Maps (desired_watch, watch_chain_index) to the watch descriptor.
         std::map<WatchHandle, std::set<FullWatchSpecifier> > wd_to_watchchain_; // Maps watch descriptor to (desired_watch, watch_chain_index).
-        std::list<WatchHandle> inotify_notifications; // List of wd that have pending notifications.
+        std::list<WatchHandle> pending_notifications; // List of wd that have pending notifications.
         std::map<WatchChainSpecifier, vector<WatchChain> > watch_chains_; // Maps (label_rule, listener_name, child_notify) to a watch chain.
 
         using ListenerInfo = std::tuple<WatchChainSpecifier, NodeListenerCallback>;
