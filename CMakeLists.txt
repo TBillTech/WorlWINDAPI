@@ -122,6 +122,10 @@ set(COMMON_SOURCES
     ${PROJECT_SOURCE_DIR}/common/frontend/mediator_cpp/yaml_mediator.cpp
 )
 
+if(WIN32)
+  list(APPEND COMMON_SOURCES ${PROJECT_SOURCE_DIR}/common/backend_cpp/file/windows_directory_watcher.cpp)
+endif()
+
 if(MINGW)
   add_compile_definitions(WIN32_LEAN_AND_MEAN NOMINMAX NOCRYPT NOGDI)
 endif()

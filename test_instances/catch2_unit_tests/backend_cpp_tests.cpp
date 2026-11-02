@@ -145,7 +145,7 @@ TEST_CASE("FileBackend test", "[FileBackend]") {
         // This rewrites the files one more time so the human can browse them.
         tester.addAnimalsToBackend();
     }
-#ifndef _WIN32
+#ifndef _WIN32 // Raw inotify API check: Linux-only by nature; the Windows watcher is covered in directory_watcher_tests.cpp.
     {
         // This is a paranoid check to see if inotify works correctly.
         // It will directly create a infotify_fd_, and a wd for the file:
@@ -218,7 +218,6 @@ TEST_CASE("FileBackend test", "[FileBackend]") {
         REQUIRE(notified); // We should have been notified of the modification
     }
 #endif
-#ifndef _WIN32 // Skipped on Windows: listener/notification tests need a real directory watcher (NullDirectoryWatcher produces no events).
     {
         FileBackend to_be_notified_backend(base_path);
         BackendTestbed tester(to_be_notified_backend);
@@ -307,7 +306,6 @@ TEST_CASE("FileBackend test", "[FileBackend]") {
         // Cleanup: Deregister the listener and remove the lion node
         backend.deregisterNodeListener(listener_name, "lion");
     }
-#endif
     {
         FileBackend file_backend(base_path);
         BackendTestbed tester(file_backend);

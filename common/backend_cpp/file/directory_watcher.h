@@ -62,5 +62,5 @@ private:
 };
 
 // Explicit factory: the inotify watcher on Linux (falling back to the null watcher if inotify cannot be
-// initialized), the null watcher elsewhere.
+// initialized), the ReadDirectoryChangesW watcher on Windows, the null watcher elsewhere.
 std::unique_ptr<DirectoryWatcher> makeDefaultDirectoryWatcher();
