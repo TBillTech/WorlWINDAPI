@@ -1,7 +1,5 @@
 #include "file_backend.h"
 #include "simple_backend.h"
-#include <dirent.h>
-#include <sys/stat.h>
 #include <filesystem>
 
 using namespace std;
@@ -10,9 +8,7 @@ using namespace fplus;
 #ifdef _WIN32
 int inotify_init1(int flag) { return -1; }
 int inotify_rm_watch(int fd, int wd) { return -1; }
-int mkdir(const char* dir, int flag) { return -1; }
 int inotify_add_watch(int fd, const char* astr, uint32_t flag) { return -1; }
-bool is_dir_dirent(struct dirent* ent) { return false; }
 #endif
 
 FileBackend::FileBackend(std::string basePath)
@@ -158,38 +154,26 @@ vector<std::string> readContentFileNames(const std::string& base_path, const std
     auto node_name = getNodeName(base_path, label_rule);
     std::vector<std::string> content_file_names;
     
-    // Open the directory
-    DIR* dir = opendir(node_dir.c_str());
-    if (!dir) {
-        if (errno == ENOENT) {
-            return content_file_names; // Return empty vector if the directory does not exist
+    std::error_code error;
+    std::filesystem::directory_iterator entry(node_dir, error);
+    if (error) {
+        return content_file_names;
+    }
+    const std::filesystem::directory_iterator end;
+    while (entry != end) {
+        const auto entry_name = entry->path().filename().string();
+        // Skip entries that do not start with the node name
+        if (entry_name.starts_with(node_name) &&
+            !entry_name.ends_with(".node") &&
+            entry_name.find('.') != std::string::npos) {
+            content_file_names.push_back(node_dir + entry_name);
         }
-        perror("opendir");
-        return content_file_names; // Return empty vector on error
+        entry.increment(error);
+        if (error) {
+            break;
+        }
     }
 
-    struct dirent* entry;
-    while ((entry = readdir(dir)) != nullptr) {
-        // Skip the current and parent directory entries
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
-            continue;
-        }
-        // Skip entries that do not start with the node name
-        if (strncmp(entry->d_name, node_name.c_str(), node_name.length()) != 0) {
-            continue;
-        }
-        // Skip entries that end in ".node" since they are not content files
-        size_t name_len = strlen(entry->d_name);
-        if (name_len >= 5 && strcmp(entry->d_name + name_len - 5, ".node") == 0) {
-            continue;
-        }
-        // Check if the entry is a content file
-        if (strstr(entry->d_name, ".") != nullptr) {
-            content_file_names.push_back(node_dir + entry->d_name);
-        }
-    }
-    
-    closedir(dir);
     // Perform a simple lexicographical sort on the file names
     std::sort(content_file_names.begin(), content_file_names.end());
     return content_file_names;
@@ -365,11 +349,11 @@ bool createNodeDirectory(const std::string& base_path, const std::string& label_
     // Get the node directory path
     std::string node_dir = getNodeDirectoryPath(base_path, label_rule);
     // Create the directory if it does not exist
-    if (mkdir(node_dir.c_str(), 0755) == -1) {
-        if (errno != EEXIST) {
-            perror("mkdir");
-            return false; // Return false if the directory could not be created
-        }
+    std::error_code error;
+    std::filesystem::create_directory(node_dir, error);
+    if (error) {
+        std::cerr << "Failed to create directory " << node_dir << ": " << error.message() << std::endl;
+        return false;
     }
     return true; // Return true if the directory was created or already exists
 }
@@ -487,48 +471,58 @@ bool deleteDirectoryRecursively(const std::string& base_path, const std::string&
         std::cerr << "Refusing to delete directory outside of base path: " << dir_path << std::endl;
         return false; // Return false if the directory is outside the base path
     }
-    DIR* dir = opendir(dir_path.c_str());
-    if (!dir) {
-        // If the directory is absent, then just return true.
-        if (errno == ENOENT) {
-            return true; // Directory does not exist, so nothing to delete
+    std::vector<std::pair<std::string, bool>> entries;
+    std::error_code error;
+    {
+        std::filesystem::directory_iterator entry(dir_path, error);
+        if (error) {
+            return error == std::errc::no_such_file_or_directory;
         }
-        perror("opendir");
-        return false; // Return false if the directory could not be opened
+        const std::filesystem::directory_iterator end;
+        while (entry != end) {
+            const auto entry_path = entry->path();
+            std::error_code status_error;
+            const bool is_symlink = entry->is_symlink(status_error);
+            if (status_error) {
+                return false;
+            }
+            const bool is_directory = !is_symlink && entry->is_directory(status_error);
+            if (status_error) {
+                return false;
+            }
+            entries.emplace_back(dir_path + "/" + entry_path.filename().string(), is_directory);
+            entry.increment(error);
+            if (error) {
+                return false;
+            }
+        }
     }
 
-    struct dirent* entry;
-    while ((entry = readdir(dir)) != nullptr) {
-        // Skip the current and parent directory entries
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
-            continue;
-        }
-        std::string full_path = dir_path + "/" + entry->d_name;
-        if (is_dir_dirent(entry)) {
+    for (const auto& [full_path, is_directory] : entries) {
+        if (is_directory) {
             // Recursively delete subdirectories
             if (!deleteDirectoryRecursively(base_path, full_path)) {
-                closedir(dir);
                 return false; // Return false if a subdirectory could not be deleted
             }
         } else {
             // Remove the file
             if (full_path.substr(0, base_path.size()) != base_path) {
                 std::cerr << "Refusing to delete file outside of base path: " << full_path << std::endl;
-                closedir(dir);
                 return false; // Return false if the file is outside the base path
             }
-            if (remove(full_path.c_str()) == -1) {
-                perror("remove");
-                closedir(dir);
+            std::error_code remove_error;
+            std::filesystem::remove(full_path, remove_error);
+            if (remove_error) {
+                std::cerr << "Failed to remove " << full_path << ": " << remove_error.message() << std::endl;
                 return false; // Return false if a file could not be removed
             }
         }
     }
-    closedir(dir);
 
     // Remove the directory itself
-    if (rmdir(dir_path.c_str()) == -1) {
-        perror("rmdir");
+    std::filesystem::remove(dir_path, error);
+    if (error) {
+        std::cerr << "Failed to remove directory " << dir_path << ": " << error.message() << std::endl;
         return false; // Return false if the directory could not be removed
     }
     return true; // Return true if the directory and its property_data were removed successfully
@@ -686,23 +680,22 @@ std::vector<TreeNode> FileBackend::queryNodesFromPath(const std::string& base_di
 {    
     std::vector<TreeNode> result;
     set<std::string> label_rules_set; // To avoid duplicates
-    DIR* dir = opendir(base_directory.c_str());
-    if (!dir) {
-        if (errno == ENOENT) {
-            return result; // Return empty vector if the directory does not exist
-        }
-        perror("opendir");
-        return result; // Return empty vector on error
+    std::error_code error;
+    std::filesystem::directory_iterator entry(base_directory, error);
+    if (error) {
+        return result;
     }
+    const std::filesystem::directory_iterator end;
     std::vector<std::string> subdirs_to_recurse; // To store subdirectories for later recursion
-    struct dirent* entry;
-    while ((entry = readdir(dir))) {
-        if (is_dir_dirent(entry)) {
-            // Skip the "." and ".." directories
-            if (entry->d_name == std::string(".") || entry->d_name == std::string("..")) {
-                continue;
-            }
-            std::string node_label = getLabelRuleFromFileName(basePath_, base_directory + entry->d_name);
+    while (entry != end) {
+        std::error_code status_error;
+        const bool is_symlink = entry->is_symlink(status_error);
+        if (status_error) {
+            return result;
+        }
+        if (!is_symlink && entry->is_directory(status_error)) {
+            const auto entry_name = entry->path().filename().string();
+            std::string node_label = getLabelRuleFromFileName(basePath_, base_directory + entry_name);
             // Check if the directory name matches the label rule
             if (node_label.find(label_rule) != std::string::npos) {
                 // If it matches, read the node from the file system
@@ -716,10 +709,16 @@ std::vector<TreeNode> FileBackend::queryNodesFromPath(const std::string& base_di
                 }
             }
             // Add to subdirs_to_recurse for later recursion
-            subdirs_to_recurse.push_back(base_directory + entry->d_name + "/");
+            subdirs_to_recurse.push_back(base_directory + entry_name + "/");
+        }
+        if (status_error) {
+            return result;
+        }
+        entry.increment(error);
+        if (error) {
+            return result;
         }
     }
-    closedir(dir);
     // Now recurse into subdirectories after closing the current directory
     for (const auto& subdir : subdirs_to_recurse) {
         auto matching_children = queryNodesFromPath(subdir, label_rule);
