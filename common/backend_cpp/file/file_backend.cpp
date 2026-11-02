@@ -5,14 +5,12 @@
 using namespace std;
 using namespace fplus;
 
-#ifdef _WIN32
-int inotify_init1(int flag) { return -1; }
-int inotify_rm_watch(int fd, int wd) { return -1; }
-int inotify_add_watch(int fd, const char* astr, uint32_t flag) { return -1; }
-#endif
-
-FileBackend::FileBackend(std::string basePath)
+FileBackend::FileBackend(std::string basePath, std::unique_ptr<DirectoryWatcher> watcher)
+    : watcher_(std::move(watcher))
 {
+    if (!watcher_) {
+        throw std::invalid_argument("Directory watcher cannot be null");
+    }
     if (basePath.empty()) {
         throw std::invalid_argument("Base Path cannot be empty");
     }
@@ -20,21 +18,14 @@ FileBackend::FileBackend(std::string basePath)
     if (basePath_.back() != '/') {
         basePath_ += '/';
     }
-    // Initialize inotify for file system notifications
-    inotify_fd_ = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
-    if (inotify_fd_ < 0) {
-        throw std::runtime_error("Failed to initialize inotify");
-    }
 }
 
 FileBackend::~FileBackend()
 {
     for (const auto& it : wd_to_watchchain_)
     {
-        int wd = it.first;
-        inotify_rm_watch(inotify_fd_, wd);
+        watcher_->remove(it.first);
     }
-    close(inotify_fd_);
 }
 
 
@@ -886,7 +877,7 @@ vector<FileBackend::WatchChain> node_watch_chain(const std::string& base_path, c
     auto node_dir = getNodeParentPath(base_path, label_rule);
     while(node_dir.length() >= base_path.length()) {
         // Add the directory to the watch chain
-        directory_watch_chain.push_front({IN_CREATE | IN_DELETE | IN_IGNORED, node_dir});
+        directory_watch_chain.push_front({kWatchCreate | kWatchDelete, node_dir});
         if (node_dir == base_path) {
             // If we reach the base path, we stop adding directories
             break;
@@ -895,11 +886,11 @@ vector<FileBackend::WatchChain> node_watch_chain(const std::string& base_path, c
         node_dir = getNodeParentPath(base_path, getLabelRuleFromFileName(base_path, node_dir));
     }
     watch_chains.push_back(directory_watch_chain);
-    watch_chains.back().push_back({IN_MODIFY | IN_IGNORED, getNodeFileName(base_path, label_rule)});
+    watch_chains.back().push_back({kWatchModify, getNodeFileName(base_path, label_rule)});
     auto content_files = readContentFileNames(base_path, label_rule);
     for (const auto& content_file : content_files) {
         watch_chains.push_back(directory_watch_chain);
-        watch_chains.back().push_back({IN_MODIFY | IN_IGNORED, content_file});
+        watch_chains.back().push_back({kWatchModify, content_file});
     }
     return watch_chains;
 }
@@ -936,10 +927,9 @@ void FileBackend::setupWatch(WatchChainSpecifier watch_chain_specifier)
             if (!std::filesystem::exists(desired.second)) {
                 continue; // Skip this path if it does not exist
             }
-            int wd = inotify_add_watch(inotify_fd_, desired.second.c_str(), desired.first);
-            if (wd < 0) {
-                perror("inotify_add_watch");
-                throw std::runtime_error("Failed to add inotify watch for path: " + desired.second);
+            WatchHandle wd = watcher_->add(desired.second, desired.first);
+            if (wd == kInvalidWatchHandle) {
+                throw std::runtime_error("Failed to add directory watch for path: " + desired.second);
             }
             FullWatchSpecifier full_watch_specifier(desired, watch_chain_index);
             if (wd_to_watchchain_.find(wd) != wd_to_watchchain_.end()) {
@@ -963,10 +953,8 @@ void FileBackend::teardownWatch(WatchChainSpecifier watch_chain_specifier)
                 auto full_watch_specifier = FullWatchSpecifier(desired, WatchChainIndex(watch_chain_specifier, 0));
                 auto wd_it = watchchain_to_wd_.find(full_watch_specifier);
                 if (wd_it != watchchain_to_wd_.end()) {
-                    int wd = wd_it->second;
-                    if (inotify_rm_watch(inotify_fd_, wd) < 0) {
-                        perror("inotify_rm_watch");
-                    }
+                    WatchHandle wd = wd_it->second;
+                    watcher_->remove(wd);
                     wd_to_watchchain_.erase(wd);
                     watchchain_to_wd_.erase(full_watch_specifier);
                 }
@@ -988,12 +976,10 @@ void FileBackend::freeWatch(WatchChainSpecifier watch_chain_specifier)
                     auto full_watch_specifier = FullWatchSpecifier(desired, watch_chain_index);
                     auto wd_it = watchchain_to_wd_.find(full_watch_specifier);
                     if (wd_it != watchchain_to_wd_.end()) {
-                        int wd = wd_it->second;
+                        WatchHandle wd = wd_it->second;
                         wd_to_watchchain_[wd].erase(full_watch_specifier);
                         if (wd_to_watchchain_[wd].empty()) {
-                            if (inotify_rm_watch(inotify_fd_, wd) < 0) {
-                                perror("inotify_rm_watch");
-                            }
+                            watcher_->remove(wd);
                             wd_to_watchchain_.erase(wd);
                         }
                     }
@@ -1005,7 +991,7 @@ void FileBackend::freeWatch(WatchChainSpecifier watch_chain_specifier)
     }
 }
 
-void FileBackend::onWatchModifyEvent(int wd)
+void FileBackend::onWatchModifyEvent(WatchHandle wd)
 {
     auto findit = wd_to_watchchain_.find(wd);
     if (findit != wd_to_watchchain_.end()) {
@@ -1020,11 +1006,11 @@ void FileBackend::onWatchModifyEvent(int wd)
             notifyListeners(label_rule, node);
         }
     } else {
-        std::cerr << "[inotify] modify event: No watch found for wd: " << wd << std::endl;
+        std::cerr << "[watcher] modify event: No watch found for wd: " << wd << std::endl;
     }
 }
 
-void FileBackend::onWatchCreateEvent(int wd, const std::string& notification_path)
+void FileBackend::onWatchCreateEvent(WatchHandle wd, const std::string& notification_path)
 {
     // This only occurs for directories, so depending on the exact path that the watcher is watching, it
     // will imply creating new watchers for the new directory and/or file.
@@ -1066,11 +1052,9 @@ void FileBackend::onWatchCreateEvent(int wd, const std::string& notification_pat
                     if (next_watch_it != watch_chain.end() && next_watch_it->second == createdPath) {
                         while(next_watch_it != watch_chain.end()) {
                             // Add a new watch for the next desired path
-                            int new_wd = inotify_add_watch(inotify_fd_, next_watch_it->second.c_str(), next_watch_it->first);
-                            if (new_wd < 0) {
-                                int err = errno;
-                                std::cerr << "[inotify_add_watch] Failed to add inotify watch for path: " << notification_path
-                                        << ", errno=" << err << ": " << strerror(err) << std::endl;
+                            WatchHandle new_wd = watcher_->add(next_watch_it->second, next_watch_it->first);
+                            if (new_wd == kInvalidWatchHandle) {
+                                std::cerr << "[DirectoryWatcher] Failed to add watch for path: " << notification_path << std::endl;
                                 break; // If we fail to add the watch, it is probably because the object hasn't been created yet, so this is the best we can do so far.
                             }
                             FullWatchSpecifier next_full_watch_specifier(*next_watch_it, watch_chain_index);
@@ -1098,11 +1082,11 @@ void FileBackend::onWatchCreateEvent(int wd, const std::string& notification_pat
             }
         }
     } else {
-        //std::cerr << "[inotify] create event: No watch found for wd: " << wd << std::endl;
+        //std::cerr << "[watcher] create event: No watch found for wd: " << wd << std::endl;
     }
 }
 
-void FileBackend::onWatchDeleteEvent(int wd, const std::string& notification_path) 
+void FileBackend::onWatchDeleteEvent(WatchHandle wd, const std::string& notification_path) 
 {
     // This closely echos the onWatchCreateEvent, but we need to remove the watch from the maps.
     // This only occurs for directories, so depending on the exact path that the watcher is watching, it
@@ -1139,7 +1123,7 @@ void FileBackend::onWatchDeleteEvent(int wd, const std::string& notification_pat
                                     notifyListeners(label_rule, node); // Notify listeners that the _node_ is modified
                                 }
                             }
-                            int old_wd = watchchain_to_wd_[old_full_watch_specifier];
+                            WatchHandle old_wd = watchchain_to_wd_[old_full_watch_specifier];
                             watchchain_to_wd_.erase(old_full_watch_specifier);
                             auto find_wd = wd_to_watchchain_.find(old_wd);
                             if (find_wd != wd_to_watchchain_.end()) {
@@ -1148,7 +1132,7 @@ void FileBackend::onWatchDeleteEvent(int wd, const std::string& notification_pat
                                 // If the wd_to_watchchain entry is empty, remove it
                                 if (find_wd->second.empty()) {
                                     wd_to_watchchain_.erase(find_wd); // Remove the watch descriptor if no more watches are associated with it
-                                    inotify_rm_watch(inotify_fd_, old_wd);
+                                    watcher_->remove(old_wd);
                                 }
                             }
                         }
@@ -1173,7 +1157,7 @@ void FileBackend::onWatchDeleteEvent(int wd, const std::string& notification_pat
                         auto dir_watch = *next_watch_it;
                         FullWatchSpecifier next_full_watch_specifier(dir_watch, watch_chain_index);
                         if (watchchain_to_wd_.find(next_full_watch_specifier) != watchchain_to_wd_.end()) {
-                            int old_wd = watchchain_to_wd_[next_full_watch_specifier];
+                            WatchHandle old_wd = watchchain_to_wd_[next_full_watch_specifier];
                             watchchain_to_wd_.erase(next_full_watch_specifier);
                             auto find_wd = wd_to_watchchain_.find(old_wd);
                             if (find_wd != wd_to_watchchain_.end()) {
@@ -1182,7 +1166,7 @@ void FileBackend::onWatchDeleteEvent(int wd, const std::string& notification_pat
                                 // If the wd_to_watchchain entry is empty, remove it
                                 if (find_wd->second.empty()) {
                                     wd_to_watchchain_.erase(find_wd); // Remove the watch descriptor if no more watches are associated with it
-                                    inotify_rm_watch(inotify_fd_, old_wd);
+                                    watcher_->remove(old_wd);
                                 }
                             }
                         }
@@ -1191,7 +1175,7 @@ void FileBackend::onWatchDeleteEvent(int wd, const std::string& notification_pat
             }
         }
     } else {
-        std::cerr << "[inotify] delete event: No watch found for wd: " << wd << std::endl;
+        std::cerr << "[watcher] delete event: No watch found for wd: " << wd << std::endl;
     }
 }
 
@@ -1217,7 +1201,7 @@ void FileBackend::deregisterNodeListener(const std::string listener_name, const 
     auto found = node_listeners_.find(notification_rule);
     if (found != node_listeners_.end()) {
         auto& listeners = found->second;
-        // First, clean up inotify watches for all listeners to be removed
+        // First, clean up directory watches for all listeners to be removed
         for (auto it = listeners.begin(); it != listeners.end(); ++it) {
             WatchChainSpecifier wc_specifier = std::get<0>(*it);
             if (get<1>(wc_specifier) == listener_name) {
@@ -1268,34 +1252,17 @@ void FileBackend::notifyListeners(const std::string& label_rule, const maybe<Tre
 
 void FileBackend::processNotifications()
 {
-    ssize_t length = read(inotify_fd_, buffer_, sizeof(buffer_));
-    if (length < 0) {
-        int err = errno;
-        if (err == EAGAIN) {
-            // No events available, not an error in non-blocking mode
-            return;
+    for (const auto& event : watcher_->poll()) {
+        switch (event.kind) {
+            case WatchEventKind::modify:
+                onWatchModifyEvent(event.handle);
+                break;
+            case WatchEventKind::create:
+                onWatchCreateEvent(event.handle, event.name);
+                break;
+            case WatchEventKind::remove:
+                onWatchDeleteEvent(event.handle, event.name);
+                break;
         }
-        std::cerr << "[inotify] read() returned " << length << ", errno=" << err << ": " << strerror(err) << std::endl << flush;
-        return;
-    }
-
-    ssize_t offset = 0;
-    while (offset < length) {
-        struct inotify_event* event = reinterpret_cast<struct inotify_event*>(&buffer_[offset]);
-        int wd = event->wd;
-        int mask = event->mask;
-        if ((mask & IN_MODIFY) == IN_MODIFY) {
-            onWatchModifyEvent(wd);
-        }
-        if (event->len > 0) {
-            string inotify_path = event->name;
-            if ((mask & IN_CREATE) == IN_CREATE) {
-                onWatchCreateEvent(wd, inotify_path);
-            }
-            if ((mask & IN_DELETE) == IN_DELETE) {
-                onWatchDeleteEvent(wd, inotify_path);
-            }
-        }
-        offset += sizeof(struct inotify_event) + event->len;
     }
 }

@@ -1,27 +1,9 @@
 #pragma once
 
 #include <map>
-#ifndef _WIN32
-#include <sys/inotify.h>
-#else
-// Includes for ReadDirectoryChangesW
-// But for now, stubs
-struct inotify_event {
-    int wd;
-    int mask;
-    int len;
-    std::string name;
-};
-const int IN_NONBLOCK = 0;
-const int IN_CLOEXEC = 0;
-const int IN_MODIFY = 0;
-const int IN_CREATE = 0;
-const int IN_DELETE = 0;
-const int IN_IGNORED = 0;
-#endif
-#include <unistd.h>
-#include <fcntl.h>
+#include <memory>
 
+#include "directory_watcher.h"
 #include "backend.h"
 
 // The FileBackend class implements the Backend interface using a file system as the storage medium.
@@ -80,7 +62,8 @@ bool deleteNodeFiles(const std::string& base_path, const std::string& label_rule
 
 class FileBackend : public Backend {
     public:
-        FileBackend(std::string basePath);
+        // The watcher is injected; it is owned by the FileBackend and destroyed after all its watches are removed.
+        FileBackend(std::string basePath, std::unique_ptr<DirectoryWatcher> watcher = makeDefaultDirectoryWatcher());
         ~FileBackend() override;
     
         // Retrieve a node by its label rule.
@@ -112,7 +95,7 @@ class FileBackend : public Backend {
         // Notify listeners for a specific label rule.
         void notifyListeners(const std::string& label_rule, const fplus::maybe<TreeNode>& node) override;
     
-        // processNotifications will check on the inotify file descriptor for any events and process them accordingly, without a dedicated thread.
+        // processNotifications will poll the directory watcher for any events and process them accordingly, without a dedicated thread.
         void processNotifications() override;
 
         using DesiredWatch = std::pair<uint32_t, std::string>; // (mask, path)
@@ -130,20 +113,18 @@ class FileBackend : public Backend {
         void setupWatch(WatchChainSpecifier watch_chain_specifier);
         void teardownWatch(WatchChainSpecifier watch_chain_specifier);
         void freeWatch(WatchChainSpecifier watch_chain_specifier);
-        void onWatchModifyEvent(int wd);
-        void onWatchCreateEvent(int wd, const std::string& notification_path);
-        void onWatchDeleteEvent(int wd, const std::string& notification_path);
-        void onWatchCloseEvent(int wd); // This is called when a watch is closed, such as when the file is deleted or the directory is removed.
+        void onWatchModifyEvent(WatchHandle wd);
+        void onWatchCreateEvent(WatchHandle wd, const std::string& notification_path);
+        void onWatchDeleteEvent(WatchHandle wd, const std::string& notification_path);
+        void onWatchCloseEvent(WatchHandle wd); // This is called when a watch is closed, such as when the file is deleted or the directory is removed.
 
         std::string basePath_;
 
-        int inotify_fd_ = -1; // File descriptor for inotify
-        char buffer_[4096]
-            __attribute__ ((aligned(__alignof__(struct inotify_event))));        
+        std::unique_ptr<DirectoryWatcher> watcher_;
         // A given label rule can have multiple watchers if it is associated with multiple directories or files.
-        std::map<FullWatchSpecifier, int> watchchain_to_wd_; // Maps (desired_watch, watch_chain_index) to the watch descriptor.
-        std::map<int, std::set<FullWatchSpecifier> > wd_to_watchchain_; // Maps watch descriptor to (desired_watch, watch_chain_index).
-        std::list<int> inotify_notifications; // List of wd that have pending notifications.
+        std::map<FullWatchSpecifier, WatchHandle> watchchain_to_wd_; // Maps (desired_watch, watch_chain_index) to the watch descriptor.
+        std::map<WatchHandle, std::set<FullWatchSpecifier> > wd_to_watchchain_; // Maps watch descriptor to (desired_watch, watch_chain_index).
+        std::list<WatchHandle> inotify_notifications; // List of wd that have pending notifications.
         std::map<WatchChainSpecifier, vector<WatchChain> > watch_chains_; // Maps (label_rule, listener_name, child_notify) to a watch chain.
 
         using ListenerInfo = std::tuple<WatchChainSpecifier, NodeListenerCallback>;

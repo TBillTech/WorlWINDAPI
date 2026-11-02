@@ -9,6 +9,10 @@
 #include "yaml_mediator.h"
 #include <sstream>
 #include <filesystem>
+#ifndef _WIN32
+#include <sys/inotify.h>
+#include <unistd.h>
+#endif
 
 using namespace std;
 using namespace fplus;
@@ -214,6 +218,7 @@ TEST_CASE("FileBackend test", "[FileBackend]") {
         REQUIRE(notified); // We should have been notified of the modification
     }
 #endif
+#ifndef _WIN32 // Skipped on Windows: listener/notification tests need a real directory watcher (NullDirectoryWatcher produces no events).
     {
         FileBackend to_be_notified_backend(base_path);
         BackendTestbed tester(to_be_notified_backend);
@@ -302,6 +307,7 @@ TEST_CASE("FileBackend test", "[FileBackend]") {
         // Cleanup: Deregister the listener and remove the lion node
         backend.deregisterNodeListener(listener_name, "lion");
     }
+#endif
     {
         FileBackend file_backend(base_path);
         BackendTestbed tester(file_backend);

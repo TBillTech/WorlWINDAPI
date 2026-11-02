@@ -115,6 +115,8 @@ set(COMMON_SOURCES
     ${PROJECT_SOURCE_DIR}/common/backend_cpp/interface/http3_tree_message.cpp
     ${PROJECT_SOURCE_DIR}/common/backend_cpp/interface/http3_tree_message_helpers.cpp
     ${PROJECT_SOURCE_DIR}/common/backend_cpp/file/file_backend.cpp
+    ${PROJECT_SOURCE_DIR}/common/backend_cpp/file/directory_watcher.cpp
+    ${PROJECT_SOURCE_DIR}/common/backend_cpp/file/inotify_directory_watcher.cpp
     ${PROJECT_SOURCE_DIR}/common/frontend/http3_server_cpp/http3_server.cpp
     ${PROJECT_SOURCE_DIR}/common/frontend/mediator_cpp/cloning_mediator.cpp
     ${PROJECT_SOURCE_DIR}/common/frontend/mediator_cpp/yaml_mediator.cpp
@@ -133,6 +135,7 @@ add_executable(catch2_unit_tests
     test_instances/catch2_unit_tests/shared_chunk_tests.cpp
     test_instances/catch2_unit_tests/backend_cpp_tests.cpp
     test_instances/catch2_unit_tests/backend_testbed.cpp
+    test_instances/catch2_unit_tests/directory_watcher_tests.cpp
     test_instances/catch2_unit_tests/http3_message_helper_tests.cpp
     test_instances/catch2_unit_tests/frontend_cpp_tests.cpp
     test_instances/catch2_unit_tests/yaml_tests.cpp
