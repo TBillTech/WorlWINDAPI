@@ -309,3 +309,25 @@ TEST_CASE("FileBackend test", "[FileBackend]") {
         tester.addAnimalsToBackend();
     }
 }
+
+TEST_CASE("FileBackend filesystem operations", "[FileBackend][filesystem]") {
+    const auto test_root = std::filesystem::temp_directory_path() / "wwatp_file_backend_filesystem_test";
+    std::filesystem::remove_all(test_root);
+    std::filesystem::create_directories(test_root);
+    const auto base_path = test_root.string() + "/";
+
+    REQUIRE(createNodeDirectory(base_path, "parent/child"));
+    REQUIRE(createNodeDirectory(base_path, "parent/child"));
+    REQUIRE(std::filesystem::is_directory(test_root / "parent" / "child"));
+
+    std::ofstream(base_path + "parent/child.0.string") << "content";
+    std::ofstream(base_path + "parent/child.node") << "node";
+    std::ofstream(base_path + "parent/other.0.string") << "other";
+    const auto content_files = readContentFileNames(base_path, "parent/child");
+    REQUIRE(content_files.size() == 1);
+    REQUIRE(content_files.front() == base_path + "parent/child.0.string");
+
+    REQUIRE(deleteNodeFiles(base_path, "parent", true));
+    REQUIRE_FALSE(std::filesystem::exists(test_root / "parent"));
+    std::filesystem::remove_all(test_root);
+}
