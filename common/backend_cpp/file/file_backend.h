@@ -2,8 +2,9 @@
 
 #include <map>
 #ifndef _WIN32
+#include <dirent.h>
 #include <sys/inotify.h>
-bool is_dir_dirent(struct dirent* ent) { ent->d_type == DT_DIR; }
+inline bool is_dir_dirent(struct dirent* ent) { return ent->d_type == DT_DIR; }
 #else
 // Includes for ReadDirectoryChangesW
 // But for now, stubs
