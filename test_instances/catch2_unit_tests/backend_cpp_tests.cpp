@@ -124,8 +124,9 @@ TEST_CASE("SimpleBackend stress test", "[SimpleBackend][stress]") {
 TEST_CASE("FileBackend test", "[FileBackend]") {
     string base_path = "/home/tom/sandbox/file_backend_test_store";
     // First, clean up the file backend store directory if it exists
-    std::filesystem::remove_all(base_path);
-    std::filesystem::create_directory(base_path);
+    std::error_code cleanup_ec;
+    std::filesystem::remove_all(base_path, cleanup_ec); // A missing store is fine
+    std::filesystem::create_directories(base_path);
 
     {
         FileBackend file_backend(base_path);
@@ -145,7 +146,7 @@ TEST_CASE("FileBackend test", "[FileBackend]") {
         // This rewrites the files one more time so the human can browse them.
         tester.addAnimalsToBackend();
     }
-#ifndef _WIN32
+#ifndef _WIN32 // Raw inotify API check: Linux-only by nature; the Windows watcher is covered in directory_watcher_tests.cpp.
     {
         // This is a paranoid check to see if inotify works correctly.
         // It will directly create a infotify_fd_, and a wd for the file:
@@ -218,7 +219,6 @@ TEST_CASE("FileBackend test", "[FileBackend]") {
         REQUIRE(notified); // We should have been notified of the modification
     }
 #endif
-#ifndef _WIN32 // Skipped on Windows: listener/notification tests need a real directory watcher (NullDirectoryWatcher produces no events).
     {
         FileBackend to_be_notified_backend(base_path);
         BackendTestbed tester(to_be_notified_backend);
@@ -270,14 +270,14 @@ TEST_CASE("FileBackend test", "[FileBackend]") {
         // Now modify the lion node directly on disk: 
         auto lion_node_path = base_path + "/lion.node";
         {
-            std::ifstream read_lion_file(lion_node_path);
+            std::ifstream read_lion_file(lion_node_path, std::ios::binary);
             if (!read_lion_file) {
                 throw std::runtime_error("Failed to open lion.node for reading");
             }
             TreeNode raw_lion_node;
             read_lion_file >> raw_lion_node; // Read the node from the file
             read_lion_file.close();
-            std::ofstream lion_file(lion_node_path);
+            std::ofstream lion_file(lion_node_path, std::ios::binary);
             if (!lion_file) {
                 throw std::runtime_error("Failed to open lion.node for writing");
             }
@@ -307,7 +307,6 @@ TEST_CASE("FileBackend test", "[FileBackend]") {
         // Cleanup: Deregister the listener and remove the lion node
         backend.deregisterNodeListener(listener_name, "lion");
     }
-#endif
     {
         FileBackend file_backend(base_path);
         BackendTestbed tester(file_backend);
