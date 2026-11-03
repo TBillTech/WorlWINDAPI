@@ -124,8 +124,9 @@ TEST_CASE("SimpleBackend stress test", "[SimpleBackend][stress]") {
 TEST_CASE("FileBackend test", "[FileBackend]") {
     string base_path = "/home/tom/sandbox/file_backend_test_store";
     // First, clean up the file backend store directory if it exists
-    std::filesystem::remove_all(base_path);
-    std::filesystem::create_directory(base_path);
+    std::error_code cleanup_ec;
+    std::filesystem::remove_all(base_path, cleanup_ec); // A missing store is fine
+    std::filesystem::create_directories(base_path);
 
     {
         FileBackend file_backend(base_path);

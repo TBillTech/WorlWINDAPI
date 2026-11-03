@@ -77,19 +77,19 @@ TEST_CASE("WindowsDirectoryWatcher real filesystem", "[DirectoryWatcher][windows
     std::filesystem::create_directories(dir);
     string dir_path = dir.string() + "/";
 
-    WindowsDirectoryWatcher watcher;
-    REQUIRE(watcher.poll().empty());
-    REQUIRE(watcher.add(dir_path + "missing", kWatchCreate) == kInvalidWatchHandle);
-    REQUIRE_FALSE(watcher.remove(12345)); // unknown handle: no-op
+    auto watcher = make_unique<WindowsDirectoryWatcher>();
+    REQUIRE(watcher->poll().empty());
+    REQUIRE(watcher->add(dir_path + "missing", kWatchCreate) == kInvalidWatchHandle);
+    REQUIRE_FALSE(watcher->remove(12345)); // unknown handle: no-op
 
     SECTION("create, rename and delete in order") {
-        auto handle = watcher.add(dir_path, kWatchCreate | kWatchDelete);
+        auto handle = watcher->add(dir_path, kWatchCreate | kWatchDelete);
         REQUIRE(handle != kInvalidWatchHandle);
         { ofstream(dir / "a.txt") << "x"; }
         std::filesystem::rename(dir / "a.txt", dir / "b.txt");
         std::filesystem::remove(dir / "b.txt");
         vector<WatchEvent> events;
-        REQUIRE(pollUntil(watcher, events, [](const vector<WatchEvent>& e) { return e.size() >= 4; }));
+        REQUIRE(pollUntil(*watcher, events, [](const vector<WatchEvent>& e) { return e.size() >= 4; }));
         REQUIRE(events[0].kind == WatchEventKind::create);
         REQUIRE(events[0].name == "a.txt");
         REQUIRE(events[1].kind == WatchEventKind::remove);
@@ -102,8 +102,8 @@ TEST_CASE("WindowsDirectoryWatcher real filesystem", "[DirectoryWatcher][windows
     SECTION("file watch filters by name, coalesces modifies and supports several handles") {
         { ofstream(dir / "watched.txt") << "x"; }
         { ofstream(dir / "other.txt") << "x"; }
-        auto h1 = watcher.add(dir_path + "watched.txt", kWatchModify);
-        auto h2 = watcher.add(dir_path + "watched.txt", kWatchModify);
+        auto h1 = watcher->add(dir_path + "watched.txt", kWatchModify);
+        auto h2 = watcher->add(dir_path + "watched.txt", kWatchModify);
         REQUIRE(h1 != kInvalidWatchHandle);
         REQUIRE(h2 != kInvalidWatchHandle);
         REQUIRE(h1 != h2);
@@ -113,28 +113,28 @@ TEST_CASE("WindowsDirectoryWatcher real filesystem", "[DirectoryWatcher][windows
             for (int i = 0; i < 100; i++) out << "line " << i << "\n";
         }
         vector<WatchEvent> events;
-        REQUIRE(pollUntil(watcher, events, [&](const vector<WatchEvent>& e) {
+        REQUIRE(pollUntil(*watcher, events, [&](const vector<WatchEvent>& e) {
             bool a = false, b = false;
             for (auto& ev : e) { a |= ev.handle == h1; b |= ev.handle == h2; }
             return a && b;
         }));
         for (auto& ev : events) REQUIRE(ev.kind == WatchEventKind::modify);
-        REQUIRE(watcher.remove(h1));
-        REQUIRE_FALSE(watcher.remove(h1));
-        REQUIRE(watcher.remove(h2));
+        REQUIRE(watcher->remove(h1));
+        REQUIRE_FALSE(watcher->remove(h1));
+        REQUIRE(watcher->remove(h2));
     }
     SECTION("deleting a watched directory yields a delete event without crashing") {
         auto sub = dir / "sub";
         std::filesystem::create_directory(sub);
-        auto handle = watcher.add(sub.string() + "/", kWatchCreate | kWatchDelete);
+        auto handle = watcher->add(sub.string() + "/", kWatchCreate | kWatchDelete);
         REQUIRE(handle != kInvalidWatchHandle);
         std::filesystem::remove(sub);
         vector<WatchEvent> events;
-        REQUIRE(pollUntil(watcher, events, [&](const vector<WatchEvent>& e) {
+        REQUIRE(pollUntil(*watcher, events, [&](const vector<WatchEvent>& e) {
             for (auto& ev : e) if (ev.handle == handle && ev.kind == WatchEventKind::remove) return true;
             return false;
         }));
-        REQUIRE(watcher.poll().empty());
+        REQUIRE(watcher->poll().empty());
     }
     SECTION("destruction with pending I/O stress") {
         for (int i = 0; i < 50; i++) {
@@ -143,6 +143,7 @@ TEST_CASE("WindowsDirectoryWatcher real filesystem", "[DirectoryWatcher][windows
             { ofstream(dir / "stress.txt") << i; }
         }
     }
+    watcher.reset();
     std::filesystem::remove_all(dir);
 }
 #endif
