@@ -150,11 +150,13 @@ std::vector<WatchEvent> WindowsDirectoryWatcher::poll()
         if (!watch.pending) {
             continue;
         }
+        // Re-arming can complete immediately when more changes were queued meanwhile, so drain until incomplete.
+        while (watch.pending) {
         DWORD bytes = 0;
         if (!GetOverlappedResult(watch.dir, &watch.overlapped, &bytes, FALSE)) {
             DWORD err = GetLastError();
             if (err == ERROR_IO_INCOMPLETE) {
-                continue;
+                break;
             }
             // The directory was deleted (or otherwise became unreadable): report it and invalidate.
             watch.pending = false;
@@ -219,6 +221,7 @@ std::vector<WatchEvent> WindowsDirectoryWatcher::poll()
             }
             if (info->NextEntryOffset == 0) break;
             offset += info->NextEntryOffset;
+        }
         }
     }
     return events;

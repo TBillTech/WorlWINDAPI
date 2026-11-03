@@ -270,14 +270,14 @@ TEST_CASE("FileBackend test", "[FileBackend]") {
         // Now modify the lion node directly on disk: 
         auto lion_node_path = base_path + "/lion.node";
         {
-            std::ifstream read_lion_file(lion_node_path);
+            std::ifstream read_lion_file(lion_node_path, std::ios::binary);
             if (!read_lion_file) {
                 throw std::runtime_error("Failed to open lion.node for reading");
             }
             TreeNode raw_lion_node;
             read_lion_file >> raw_lion_node; // Read the node from the file
             read_lion_file.close();
-            std::ofstream lion_file(lion_node_path);
+            std::ofstream lion_file(lion_node_path, std::ios::binary);
             if (!lion_file) {
                 throw std::runtime_error("Failed to open lion.node for writing");
             }
