@@ -45,9 +45,9 @@ inline string toString(TLVType t) {
 
 StreamIdentifier SocketCommunication::getNewRequestStreamIdentifier(Request const &req) 
 {
-    if (!req.isWWATP()) {
+    if (!req.isWorlWIND()) {
         lock_guard<std::mutex> lock(returnPathsMutex);
-        // This is not a WWATP request, so check if it is already in the staticRequests
+        // This is not a WORLWIND request, so check if it is already in the staticRequests
         auto findit = staticRequests.find(req);
         if (findit != staticRequests.end()) {
             return findit->second;
@@ -69,8 +69,8 @@ StreamIdentifier SocketCommunication::getNewRequestStreamIdentifier(Request cons
         stream_id = stream_id_counter.fetch_add(2);
         newStreamIdentifier = StreamIdentifier(cid, stream_id);
     }
-    if (!req.isWWATP()) {
-        // This is not a WWATP request, so add it to the staticRequests
+    if (!req.isWorlWIND()) {
+        // This is not a WORLWIND request, so add it to the staticRequests
         staticRequests.insert(make_pair(req, newStreamIdentifier));
     }
     returnPaths.insert(make_pair(newStreamIdentifier, req));

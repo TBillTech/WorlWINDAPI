@@ -95,41 +95,41 @@ struct payload_chunk_header {
     static constexpr uint8_t SIGNAL_CLOSE_STREAM = 0x01;
     static constexpr uint8_t SIGNAL_HEARTBEAT = 0x02;
     static constexpr uint8_t SIGNAL_PLACEHOLDER = 0xFF;
-    //Since the entirety of the transport logic exists only to support the http3 server and client for WWATP,
-    //the various signal codes for used by the http3_tree_messages can be defined here. These track the backend.h interface,
+    //Since the entirety of the transport logic exists only to support the stream server and client for WORLWIND,
+    //the various signal codes for used by the stream_tree_messages can be defined here. These track the backend.h interface,
     //but also have the journaling api.
-    static constexpr uint8_t SIGNAL_WWATP_REQUEST_CONTINUE = 0x03;
-    static constexpr uint8_t SIGNAL_WWATP_RESPONSE_CONTINUE = 0x04;
-    static constexpr uint8_t SIGNAL_WWATP_REQUEST_FINAL = 0x05;
-    static constexpr uint8_t SIGNAL_WWATP_RESPONSE_FINAL = 0x06;
-    static constexpr uint8_t SIGNAL_WWATP_GET_NODE_REQUEST = 0x07;
-    static constexpr uint8_t SIGNAL_WWATP_GET_NODE_RESPONSE = 0x08;
-    static constexpr uint8_t SIGNAL_WWATP_UPSERT_NODE_REQUEST = 0x09;
-    static constexpr uint8_t SIGNAL_WWATP_UPSERT_NODE_RESPONSE = 0x0A;
-    static constexpr uint8_t SIGNAL_WWATP_DELETE_NODE_REQUEST = 0x0B;
-    static constexpr uint8_t SIGNAL_WWATP_DELETE_NODE_RESPONSE = 0x0C;
-    static constexpr uint8_t SIGNAL_WWATP_GET_PAGE_TREE_REQUEST = 0x0D;
-    static constexpr uint8_t SIGNAL_WWATP_GET_PAGE_TREE_RESPONSE = 0x0E;
-    static constexpr uint8_t SIGNAL_WWATP_QUERY_NODES_REQUEST = 0x0F;
-    static constexpr uint8_t SIGNAL_WWATP_QUERY_NODES_RESPONSE = 0x10;
-    static constexpr uint8_t SIGNAL_WWATP_OPEN_TRANSACTION_LAYER_REQUEST = 0x11;
-    static constexpr uint8_t SIGNAL_WWATP_OPEN_TRANSACTION_LAYER_RESPONSE = 0x12;
-    static constexpr uint8_t SIGNAL_WWATP_CLOSE_TRANSACTION_LAYERS_REQUEST = 0x13;
-    static constexpr uint8_t SIGNAL_WWATP_CLOSE_TRANSACTION_LAYERS_RESPONSE = 0x14;
-    static constexpr uint8_t SIGNAL_WWATP_APPLY_TRANSACTION_REQUEST = 0x15;
-    static constexpr uint8_t SIGNAL_WWATP_APPLY_TRANSACTION_RESPONSE = 0x16;
-    static constexpr uint8_t SIGNAL_WWATP_GET_FULL_TREE_REQUEST = 0x17;
-    static constexpr uint8_t SIGNAL_WWATP_GET_FULL_TREE_RESPONSE = 0x18;
-    static constexpr uint8_t SIGNAL_WWATP_REGISTER_LISTENER_REQUEST = 0x19;
-    static constexpr uint8_t SIGNAL_WWATP_REGISTER_LISTENER_RESPONSE = 0x1A;
-    static constexpr uint8_t SIGNAL_WWATP_DEREGISTER_LISTENER_REQUEST = 0x1B;
-    static constexpr uint8_t SIGNAL_WWATP_DEREGISTER_LISTENER_RESPONSE = 0x1C;
-    static constexpr uint8_t SIGNAL_WWATP_NOTIFY_LISTENERS_REQUEST = 0x1D;
-    static constexpr uint8_t SIGNAL_WWATP_NOTIFY_LISTENERS_RESPONSE = 0x1E;
-    static constexpr uint8_t SIGNAL_WWATP_PROCESS_NOTIFICATION_REQUEST = 0x1F;
-    static constexpr uint8_t SIGNAL_WWATP_PROCESS_NOTIFICATION_RESPONSE = 0x20;
-    static constexpr uint8_t SIGNAL_WWATP_GET_JOURNAL_REQUEST = 0x21;
-    static constexpr uint8_t SIGNAL_WWATP_GET_JOURNAL_RESPONSE = 0x22;
+    static constexpr uint8_t SIGNAL_WORLWIND_REQUEST_CONTINUE = 0x03;
+    static constexpr uint8_t SIGNAL_WORLWIND_RESPONSE_CONTINUE = 0x04;
+    static constexpr uint8_t SIGNAL_WORLWIND_REQUEST_FINAL = 0x05;
+    static constexpr uint8_t SIGNAL_WORLWIND_RESPONSE_FINAL = 0x06;
+    static constexpr uint8_t SIGNAL_WORLWIND_GET_NODE_REQUEST = 0x07;
+    static constexpr uint8_t SIGNAL_WORLWIND_GET_NODE_RESPONSE = 0x08;
+    static constexpr uint8_t SIGNAL_WORLWIND_UPSERT_NODE_REQUEST = 0x09;
+    static constexpr uint8_t SIGNAL_WORLWIND_UPSERT_NODE_RESPONSE = 0x0A;
+    static constexpr uint8_t SIGNAL_WORLWIND_DELETE_NODE_REQUEST = 0x0B;
+    static constexpr uint8_t SIGNAL_WORLWIND_DELETE_NODE_RESPONSE = 0x0C;
+    static constexpr uint8_t SIGNAL_WORLWIND_GET_PAGE_TREE_REQUEST = 0x0D;
+    static constexpr uint8_t SIGNAL_WORLWIND_GET_PAGE_TREE_RESPONSE = 0x0E;
+    static constexpr uint8_t SIGNAL_WORLWIND_QUERY_NODES_REQUEST = 0x0F;
+    static constexpr uint8_t SIGNAL_WORLWIND_QUERY_NODES_RESPONSE = 0x10;
+    static constexpr uint8_t SIGNAL_WORLWIND_OPEN_TRANSACTION_LAYER_REQUEST = 0x11;
+    static constexpr uint8_t SIGNAL_WORLWIND_OPEN_TRANSACTION_LAYER_RESPONSE = 0x12;
+    static constexpr uint8_t SIGNAL_WORLWIND_CLOSE_TRANSACTION_LAYERS_REQUEST = 0x13;
+    static constexpr uint8_t SIGNAL_WORLWIND_CLOSE_TRANSACTION_LAYERS_RESPONSE = 0x14;
+    static constexpr uint8_t SIGNAL_WORLWIND_APPLY_TRANSACTION_REQUEST = 0x15;
+    static constexpr uint8_t SIGNAL_WORLWIND_APPLY_TRANSACTION_RESPONSE = 0x16;
+    static constexpr uint8_t SIGNAL_WORLWIND_GET_FULL_TREE_REQUEST = 0x17;
+    static constexpr uint8_t SIGNAL_WORLWIND_GET_FULL_TREE_RESPONSE = 0x18;
+    static constexpr uint8_t SIGNAL_WORLWIND_REGISTER_LISTENER_REQUEST = 0x19;
+    static constexpr uint8_t SIGNAL_WORLWIND_REGISTER_LISTENER_RESPONSE = 0x1A;
+    static constexpr uint8_t SIGNAL_WORLWIND_DEREGISTER_LISTENER_REQUEST = 0x1B;
+    static constexpr uint8_t SIGNAL_WORLWIND_DEREGISTER_LISTENER_RESPONSE = 0x1C;
+    static constexpr uint8_t SIGNAL_WORLWIND_NOTIFY_LISTENERS_REQUEST = 0x1D;
+    static constexpr uint8_t SIGNAL_WORLWIND_NOTIFY_LISTENERS_RESPONSE = 0x1E;
+    static constexpr uint8_t SIGNAL_WORLWIND_PROCESS_NOTIFICATION_REQUEST = 0x1F;
+    static constexpr uint8_t SIGNAL_WORLWIND_PROCESS_NOTIFICATION_RESPONSE = 0x20;
+    static constexpr uint8_t SIGNAL_WORLWIND_GET_JOURNAL_REQUEST = 0x21;
+    static constexpr uint8_t SIGNAL_WORLWIND_GET_JOURNAL_RESPONSE = 0x22;
 };
 #pragma pack(pop)
 

@@ -7,10 +7,10 @@ using namespace fplus;
 
 template <typename encoded_type>
 void test_encode_decode_request(uint16_t request_id, const encoded_type& obj,
-    HTTP3TreeMessage& client_request,
-    HTTP3TreeMessage& server_request,
-    function<void(HTTP3TreeMessage&, const encoded_type&)> encode_func,
-    function<encoded_type(HTTP3TreeMessage&)> decode_func) {
+    StreamTreeMessage& client_request,
+    StreamTreeMessage& server_request,
+    function<void(StreamTreeMessage&, const encoded_type&)> encode_func,
+    function<encoded_type(StreamTreeMessage&)> decode_func) {
     encode_func(client_request, obj);
     REQUIRE(client_request.isInitialized());
     client_request.setRequestId(request_id);
@@ -29,10 +29,10 @@ void test_encode_decode_request(uint16_t request_id, const encoded_type& obj,
 
 template <typename encoded_type>
 void test_encode_decode_response(const encoded_type& obj,
-    HTTP3TreeMessage& client_response,
-    HTTP3TreeMessage& server_response,
-    function<void(HTTP3TreeMessage&, const encoded_type&)> encode_func,
-    function<encoded_type(HTTP3TreeMessage&)> decode_func) {
+    StreamTreeMessage& client_response,
+    StreamTreeMessage& server_response,
+    function<void(StreamTreeMessage&, const encoded_type&)> encode_func,
+    function<encoded_type(StreamTreeMessage&)> decode_func) {
     REQUIRE(server_response.isResponseComplete() == false);
     encode_func(server_response, obj);
     REQUIRE(server_response.isResponseComplete());
@@ -53,14 +53,14 @@ void test_encode_decode_response(const encoded_type& obj,
 template <typename request_type, typename response_type>
 void messageCycleTest(uint16_t request_id, request_type const& request_obj, 
         response_type const& response_obj, 
-        function<void(HTTP3TreeMessage&, const request_type&)> encode_request_func,
-        function<request_type(HTTP3TreeMessage&)> decode_request_func,
-        function<void(HTTP3TreeMessage&, const response_type&)> encode_response_func,
-        function<response_type(HTTP3TreeMessage&)> decode_response_func,
+        function<void(StreamTreeMessage&, const request_type&)> encode_request_func,
+        function<request_type(StreamTreeMessage&)> decode_request_func,
+        function<void(StreamTreeMessage&, const response_type&)> encode_response_func,
+        function<response_type(StreamTreeMessage&)> decode_response_func,
         uint8_t request_signal, uint8_t response_signal)
 {
-    HTTP3TreeMessage client_message;
-    HTTP3TreeMessage server_message;
+    StreamTreeMessage client_message;
+    StreamTreeMessage server_message;
 
     test_encode_decode_request(request_id, request_obj, client_message, server_message,
         encode_request_func, decode_request_func);
@@ -74,23 +74,23 @@ void messageCycleTest(uint16_t request_id, request_type const& request_obj,
 }
 
 
-TEST_CASE("HTTP3TreeMessage encode and decode getNodeRequest", "[http3_tree_message]") {
+TEST_CASE("StreamTreeMessage encode and decode getNodeRequest", "[stream_tree_message]") {
     auto nodeRequestTest = [](uint16_t request_id, const std::string& request_obj, const fplus::maybe<TreeNode>& response_obj) {
         using request_type = std::string;
         using response_type = fplus::maybe<TreeNode>;
-        uint8_t request_signal = payload_chunk_header::SIGNAL_WWATP_GET_NODE_REQUEST;
-        uint8_t response_signal = payload_chunk_header::SIGNAL_WWATP_GET_NODE_RESPONSE;
+        uint8_t request_signal = payload_chunk_header::SIGNAL_WORLWIND_GET_NODE_REQUEST;
+        uint8_t response_signal = payload_chunk_header::SIGNAL_WORLWIND_GET_NODE_RESPONSE;
         auto encode_request_func = 
-            [](HTTP3TreeMessage & client_message, request_type const& request_obj) { 
+            [](StreamTreeMessage & client_message, request_type const& request_obj) { 
                 client_message.encode_getNodeRequest(request_obj); };
         auto decode_request_func = 
-            [](HTTP3TreeMessage & server_message) { 
+            [](StreamTreeMessage & server_message) { 
                 return server_message.decode_getNodeRequest(); };
         auto encode_response_func = 
-            [](HTTP3TreeMessage & server_message, response_type const response_obj) { 
+            [](StreamTreeMessage & server_message, response_type const response_obj) { 
                 server_message.encode_getNodeResponse(response_obj); };
         auto decode_response_func = 
-            [](HTTP3TreeMessage & client_message) { 
+            [](StreamTreeMessage & client_message) { 
                 return client_message.decode_getNodeResponse(); };
         messageCycleTest<request_type, response_type>(request_id, request_obj, response_obj, 
             encode_request_func, decode_request_func,
@@ -111,23 +111,23 @@ TEST_CASE("HTTP3TreeMessage encode and decode getNodeRequest", "[http3_tree_mess
     nodeRequestTest(request_id++, "https://example.com/path/to/resource?query=param#fragment", fplus::just(anAnimal));
 }
 
-TEST_CASE("HTTP3TreeMessage encode and decode upsertNodeRequest", "[http3_tree_message]") {
+TEST_CASE("StreamTreeMessage encode and decode upsertNodeRequest", "[stream_tree_message]") {
     auto nodeUpsertTest = [](uint16_t request_id, const std::vector<TreeNode>& request_obj, bool response_obj) {
         using request_type = std::vector<TreeNode>;
         using response_type = bool;
-        uint8_t request_signal = payload_chunk_header::SIGNAL_WWATP_UPSERT_NODE_REQUEST;
-        uint8_t response_signal = payload_chunk_header::SIGNAL_WWATP_UPSERT_NODE_RESPONSE;
+        uint8_t request_signal = payload_chunk_header::SIGNAL_WORLWIND_UPSERT_NODE_REQUEST;
+        uint8_t response_signal = payload_chunk_header::SIGNAL_WORLWIND_UPSERT_NODE_RESPONSE;
         auto encode_request_func = 
-            [](HTTP3TreeMessage & client_message, request_type const& request_obj) { 
+            [](StreamTreeMessage & client_message, request_type const& request_obj) { 
                 client_message.encode_upsertNodeRequest(request_obj); };
         auto decode_request_func = 
-            [](HTTP3TreeMessage & server_message) { 
+            [](StreamTreeMessage & server_message) { 
                 return server_message.decode_upsertNodeRequest(); };
         auto encode_response_func = 
-            [](HTTP3TreeMessage & server_message, response_type const response_obj) { 
+            [](StreamTreeMessage & server_message, response_type const response_obj) { 
                 server_message.encode_upsertNodeResponse(response_obj); };
         auto decode_response_func = 
-            [](HTTP3TreeMessage & client_message) { 
+            [](StreamTreeMessage & client_message) { 
                 return client_message.decode_upsertNodeResponse(); };
         messageCycleTest<request_type, response_type>(request_id, request_obj, response_obj, 
             encode_request_func, decode_request_func,
@@ -154,23 +154,23 @@ TEST_CASE("HTTP3TreeMessage encode and decode upsertNodeRequest", "[http3_tree_m
     nodeUpsertTest(request_id++, {simpleAnimal}, false);
 }
 
-TEST_CASE("HTTP3TreeMessage encode and decode deleteNodeRequest", "[http3_tree_message]") {
+TEST_CASE("StreamTreeMessage encode and decode deleteNodeRequest", "[stream_tree_message]") {
     auto nodeDeleteTest = [](uint16_t request_id, const std::string& request_obj, bool response_obj) {
         using request_type = std::string;
         using response_type = bool;
-        uint8_t request_signal = payload_chunk_header::SIGNAL_WWATP_DELETE_NODE_REQUEST;
-        uint8_t response_signal = payload_chunk_header::SIGNAL_WWATP_DELETE_NODE_RESPONSE;
+        uint8_t request_signal = payload_chunk_header::SIGNAL_WORLWIND_DELETE_NODE_REQUEST;
+        uint8_t response_signal = payload_chunk_header::SIGNAL_WORLWIND_DELETE_NODE_RESPONSE;
         auto encode_request_func = 
-            [](HTTP3TreeMessage & client_message, request_type const& request_obj) { 
+            [](StreamTreeMessage & client_message, request_type const& request_obj) { 
                 client_message.encode_deleteNodeRequest(request_obj); };
         auto decode_request_func = 
-            [](HTTP3TreeMessage & server_message) { 
+            [](StreamTreeMessage & server_message) { 
                 return server_message.decode_deleteNodeRequest(); };
         auto encode_response_func = 
-            [](HTTP3TreeMessage & server_message, response_type const response_obj) { 
+            [](StreamTreeMessage & server_message, response_type const response_obj) { 
                 server_message.encode_deleteNodeResponse(response_obj); };
         auto decode_response_func = 
-            [](HTTP3TreeMessage & client_message) { 
+            [](StreamTreeMessage & client_message) { 
                 return client_message.decode_deleteNodeResponse(); };
         messageCycleTest<request_type, response_type>(request_id, request_obj, response_obj, 
             encode_request_func, decode_request_func,
@@ -186,23 +186,23 @@ TEST_CASE("HTTP3TreeMessage encode and decode deleteNodeRequest", "[http3_tree_m
     nodeDeleteTest(request_id++, "https://example.com/path/to/resource?query=param#fragment", true);
 }
 
-TEST_CASE("HTTP3TreeMessage encode and decode getPageTreeRequest", "[http3_tree_message]") {
+TEST_CASE("StreamTreeMessage encode and decode getPageTreeRequest", "[stream_tree_message]") {
     auto pageTreeRequestTest = [](uint16_t request_id, const std::string& request_obj, const std::vector<TreeNode>& response_obj) {
         using request_type = std::string;
         using response_type = std::vector<TreeNode>;
-        uint8_t request_signal = payload_chunk_header::SIGNAL_WWATP_GET_PAGE_TREE_REQUEST;
-        uint8_t response_signal = payload_chunk_header::SIGNAL_WWATP_GET_PAGE_TREE_RESPONSE;
+        uint8_t request_signal = payload_chunk_header::SIGNAL_WORLWIND_GET_PAGE_TREE_REQUEST;
+        uint8_t response_signal = payload_chunk_header::SIGNAL_WORLWIND_GET_PAGE_TREE_RESPONSE;
         auto encode_request_func = 
-            [](HTTP3TreeMessage & client_message, request_type const& request_obj) { 
+            [](StreamTreeMessage & client_message, request_type const& request_obj) { 
                 client_message.encode_getPageTreeRequest(request_obj); };
         auto decode_request_func = 
-            [](HTTP3TreeMessage & server_message) { 
+            [](StreamTreeMessage & server_message) { 
                 return server_message.decode_getPageTreeRequest(); };
         auto encode_response_func = 
-            [](HTTP3TreeMessage & server_message, response_type const response_obj) { 
+            [](StreamTreeMessage & server_message, response_type const response_obj) { 
                 server_message.encode_getPageTreeResponse(response_obj); };
         auto decode_response_func = 
-            [](HTTP3TreeMessage & client_message) { 
+            [](StreamTreeMessage & client_message) { 
                 return client_message.decode_getPageTreeResponse(); };
         messageCycleTest<request_type, response_type>(request_id, request_obj, response_obj, 
             encode_request_func, decode_request_func,
@@ -232,23 +232,23 @@ TEST_CASE("HTTP3TreeMessage encode and decode getPageTreeRequest", "[http3_tree_
     pageTreeRequestTest(request_id++, "https://example.com/path/to/empty_page", {});
 }
 
-TEST_CASE("HTTP3TreeMessage encode and decode getQueryNodesRequest", "[http3_tree_message]") {
+TEST_CASE("StreamTreeMessage encode and decode getQueryNodesRequest", "[stream_tree_message]") {
     auto queryNodesRequestTest = [](uint16_t request_id, const std::string& request_obj, const std::vector<TreeNode>& response_obj) {
         using request_type = std::string;
         using response_type = std::vector<TreeNode>;
-        uint8_t request_signal = payload_chunk_header::SIGNAL_WWATP_QUERY_NODES_REQUEST;
-        uint8_t response_signal = payload_chunk_header::SIGNAL_WWATP_QUERY_NODES_RESPONSE;
+        uint8_t request_signal = payload_chunk_header::SIGNAL_WORLWIND_QUERY_NODES_REQUEST;
+        uint8_t response_signal = payload_chunk_header::SIGNAL_WORLWIND_QUERY_NODES_RESPONSE;
         auto encode_request_func = 
-            [](HTTP3TreeMessage & client_message, request_type const& request_obj) { 
+            [](StreamTreeMessage & client_message, request_type const& request_obj) { 
                 client_message.encode_getQueryNodesRequest(request_obj); };
         auto decode_request_func = 
-            [](HTTP3TreeMessage & server_message) { 
+            [](StreamTreeMessage & server_message) { 
                 return server_message.decode_getQueryNodesRequest(); };
         auto encode_response_func = 
-            [](HTTP3TreeMessage & server_message, response_type const response_obj) { 
+            [](StreamTreeMessage & server_message, response_type const response_obj) { 
                 server_message.encode_getQueryNodesResponse(response_obj); };
         auto decode_response_func = 
-            [](HTTP3TreeMessage & client_message) { 
+            [](StreamTreeMessage & client_message) { 
                 return client_message.decode_getQueryNodesResponse(); };
         messageCycleTest<request_type, response_type>(request_id, request_obj, response_obj, 
             encode_request_func, decode_request_func,
@@ -277,23 +277,23 @@ TEST_CASE("HTTP3TreeMessage encode and decode getQueryNodesRequest", "[http3_tre
     queryNodesRequestTest(request_id++, "", {complex_node});
 }
 
-TEST_CASE("HTTP3TreeMessage encode and decode openTransactionLayerRequest", "[http3_tree_message]") {
+TEST_CASE("StreamTreeMessage encode and decode openTransactionLayerRequest", "[stream_tree_message]") {
     auto openTransactionLayerTest = [](uint16_t request_id, const TreeNode& request_obj, bool response_obj) {
         using request_type = TreeNode;
         using response_type = bool;
-        uint8_t request_signal = payload_chunk_header::SIGNAL_WWATP_OPEN_TRANSACTION_LAYER_REQUEST;
-        uint8_t response_signal = payload_chunk_header::SIGNAL_WWATP_OPEN_TRANSACTION_LAYER_RESPONSE;
+        uint8_t request_signal = payload_chunk_header::SIGNAL_WORLWIND_OPEN_TRANSACTION_LAYER_REQUEST;
+        uint8_t response_signal = payload_chunk_header::SIGNAL_WORLWIND_OPEN_TRANSACTION_LAYER_RESPONSE;
         auto encode_request_func = 
-            [](HTTP3TreeMessage & client_message, request_type const& request_obj) { 
+            [](StreamTreeMessage & client_message, request_type const& request_obj) { 
                 client_message.encode_openTransactionLayerRequest(request_obj); };
         auto decode_request_func = 
-            [](HTTP3TreeMessage & server_message) { 
+            [](StreamTreeMessage & server_message) { 
                 return server_message.decode_openTransactionLayerRequest(); };
         auto encode_response_func = 
-            [](HTTP3TreeMessage & server_message, response_type const response_obj) { 
+            [](StreamTreeMessage & server_message, response_type const response_obj) { 
                 server_message.encode_openTransactionLayerResponse(response_obj); };
         auto decode_response_func = 
-            [](HTTP3TreeMessage & client_message) { 
+            [](StreamTreeMessage & client_message) { 
                 return client_message.decode_openTransactionLayerResponse(); };
         messageCycleTest<request_type, response_type>(request_id, request_obj, response_obj, 
             encode_request_func, decode_request_func,
@@ -319,25 +319,25 @@ TEST_CASE("HTTP3TreeMessage encode and decode openTransactionLayerRequest", "[ht
     openTransactionLayerTest(request_id++, anAnimal, false);
 }
 
-TEST_CASE("HTTP3TreeMessage encode and decode closeTransactionLayersRequest", "[http3_tree_message]") {
+TEST_CASE("StreamTreeMessage encode and decode closeTransactionLayersRequest", "[stream_tree_message]") {
     auto closeTransactionLayersTest = [](uint16_t request_id, bool request_obj, bool response_obj) {
         using request_type = bool; // bool type just for making the lambda compile
         using response_type = bool;
-        uint8_t request_signal = payload_chunk_header::SIGNAL_WWATP_CLOSE_TRANSACTION_LAYERS_REQUEST;
-        uint8_t response_signal = payload_chunk_header::SIGNAL_WWATP_CLOSE_TRANSACTION_LAYERS_RESPONSE;
+        uint8_t request_signal = payload_chunk_header::SIGNAL_WORLWIND_CLOSE_TRANSACTION_LAYERS_REQUEST;
+        uint8_t response_signal = payload_chunk_header::SIGNAL_WORLWIND_CLOSE_TRANSACTION_LAYERS_RESPONSE;
         auto encode_request_func = 
-            [](HTTP3TreeMessage & client_message, request_type const& request_obj) { 
+            [](StreamTreeMessage & client_message, request_type const& request_obj) { 
                 client_message.encode_closeTransactionLayersRequest(); };
         auto decode_request_func = 
-            [&request_obj](HTTP3TreeMessage & server_message) { 
+            [&request_obj](StreamTreeMessage & server_message) { 
                 server_message.decode_closeTransactionLayersRequest();
                 return request_obj; // mock up returning the request_obj
             };
         auto encode_response_func = 
-            [](HTTP3TreeMessage & server_message, response_type const response_obj) { 
+            [](StreamTreeMessage & server_message, response_type const response_obj) { 
                 server_message.encode_closeTransactionLayersResponse(response_obj); };
         auto decode_response_func = 
-            [](HTTP3TreeMessage & client_message) { 
+            [](StreamTreeMessage & client_message) { 
                 return client_message.decode_closeTransactionLayersResponse(); };
         messageCycleTest<request_type, response_type>(request_id, request_obj, response_obj, 
             encode_request_func, decode_request_func,
@@ -351,23 +351,23 @@ TEST_CASE("HTTP3TreeMessage encode and decode closeTransactionLayersRequest", "[
     closeTransactionLayersTest(request_id++, true, false);
 }
 
-TEST_CASE("HTTP3TreeMessage encode and decode applyTransactionRequest", "[http3_tree_message]") {
+TEST_CASE("StreamTreeMessage encode and decode applyTransactionRequest", "[stream_tree_message]") {
     auto applyTransactionTest = [](uint16_t request_id, const Transaction& request_obj, bool response_obj) {
         using request_type = Transaction;
         using response_type = bool;
-        uint8_t request_signal = payload_chunk_header::SIGNAL_WWATP_APPLY_TRANSACTION_REQUEST;
-        uint8_t response_signal = payload_chunk_header::SIGNAL_WWATP_APPLY_TRANSACTION_RESPONSE;
+        uint8_t request_signal = payload_chunk_header::SIGNAL_WORLWIND_APPLY_TRANSACTION_REQUEST;
+        uint8_t response_signal = payload_chunk_header::SIGNAL_WORLWIND_APPLY_TRANSACTION_RESPONSE;
         auto encode_request_func = 
-            [](HTTP3TreeMessage & client_message, request_type const& request_obj) { 
+            [](StreamTreeMessage & client_message, request_type const& request_obj) { 
                 client_message.encode_applyTransactionRequest(request_obj); };
         auto decode_request_func = 
-            [](HTTP3TreeMessage & server_message) { 
+            [](StreamTreeMessage & server_message) { 
                 return server_message.decode_applyTransactionRequest(); };
         auto encode_response_func = 
-            [](HTTP3TreeMessage & server_message, response_type const response_obj) { 
+            [](StreamTreeMessage & server_message, response_type const response_obj) { 
                 server_message.encode_applyTransactionResponse(response_obj); };
         auto decode_response_func = 
-            [](HTTP3TreeMessage & client_message) { 
+            [](StreamTreeMessage & client_message) { 
                 return client_message.decode_applyTransactionResponse(); };
         messageCycleTest<request_type, response_type>(request_id, request_obj, response_obj, 
             encode_request_func, decode_request_func,
@@ -413,25 +413,25 @@ TEST_CASE("HTTP3TreeMessage encode and decode applyTransactionRequest", "[http3_
     applyTransactionTest(request_id++, simple_transaction, false);
 }
 
-TEST_CASE("HTTP3TreeMessage encode and decode getFullTreeRequest", "[http3_tree_message]") {
+TEST_CASE("StreamTreeMessage encode and decode getFullTreeRequest", "[stream_tree_message]") {
     auto fullTreeRequestTest = [](uint16_t request_id, bool request_obj, const std::vector<TreeNode>& response_obj) {
         using request_type = bool; // No request data for this operation
         using response_type = std::vector<TreeNode>;
-        uint8_t request_signal = payload_chunk_header::SIGNAL_WWATP_GET_FULL_TREE_REQUEST;
-        uint8_t response_signal = payload_chunk_header::SIGNAL_WWATP_GET_FULL_TREE_RESPONSE;
+        uint8_t request_signal = payload_chunk_header::SIGNAL_WORLWIND_GET_FULL_TREE_REQUEST;
+        uint8_t response_signal = payload_chunk_header::SIGNAL_WORLWIND_GET_FULL_TREE_RESPONSE;
         auto encode_request_func = 
-            [](HTTP3TreeMessage & client_message, request_type const& request_obj) { 
+            [](StreamTreeMessage & client_message, request_type const& request_obj) { 
                 client_message.encode_getFullTreeRequest(); };
         auto decode_request_func = 
-            [&request_obj](HTTP3TreeMessage & server_message) { 
+            [&request_obj](StreamTreeMessage & server_message) { 
                 server_message.decode_getFullTreeRequest();
                 return request_obj; // mock up returning the request_obj
             };
         auto encode_response_func = 
-            [](HTTP3TreeMessage & server_message, response_type const response_obj) { 
+            [](StreamTreeMessage & server_message, response_type const response_obj) { 
                 server_message.encode_getFullTreeResponse(response_obj); };
         auto decode_response_func = 
-            [](HTTP3TreeMessage & client_message) { 
+            [](StreamTreeMessage & client_message) { 
                 return client_message.decode_getFullTreeResponse(); };
         messageCycleTest<request_type, response_type>(request_id, request_obj, response_obj, 
             encode_request_func, decode_request_func,
@@ -457,23 +457,23 @@ TEST_CASE("HTTP3TreeMessage encode and decode getFullTreeRequest", "[http3_tree_
     fullTreeRequestTest(request_id++, true, {});
 }
 
-TEST_CASE("HTTP3TreeMessage encode and decode registerNodeListenerRequest", "[http3_tree_message]") {
+TEST_CASE("StreamTreeMessage encode and decode registerNodeListenerRequest", "[stream_tree_message]") {
     auto registerNodeListenerTest = [](uint16_t request_id, tuple<string, string, bool> request_obj, bool response_obj) {
         using request_type = tuple<string, string, bool>;
         using response_type = bool;
-        uint8_t request_signal = payload_chunk_header::SIGNAL_WWATP_REGISTER_LISTENER_REQUEST;
-        uint8_t response_signal = payload_chunk_header::SIGNAL_WWATP_REGISTER_LISTENER_RESPONSE;
+        uint8_t request_signal = payload_chunk_header::SIGNAL_WORLWIND_REGISTER_LISTENER_REQUEST;
+        uint8_t response_signal = payload_chunk_header::SIGNAL_WORLWIND_REGISTER_LISTENER_RESPONSE;
         auto encode_request_func = 
-            [](HTTP3TreeMessage & client_message, request_type const& request_obj) { 
+            [](StreamTreeMessage & client_message, request_type const& request_obj) { 
                 client_message.encode_registerNodeListenerRequest(get<0>(request_obj), get<1>(request_obj), get<2>(request_obj)); };
         auto decode_request_func = 
-            [](HTTP3TreeMessage & server_message) { 
+            [](StreamTreeMessage & server_message) { 
                 return server_message.decode_registerNodeListenerRequest(); };
         auto encode_response_func = 
-            [](HTTP3TreeMessage & server_message, response_type const response_obj) { 
+            [](StreamTreeMessage & server_message, response_type const response_obj) { 
                 server_message.encode_registerNodeListenerResponse(response_obj); };
         auto decode_response_func = 
-            [](HTTP3TreeMessage & client_message) { 
+            [](StreamTreeMessage & client_message) { 
                 return client_message.decode_registerNodeListenerResponse(); };
         messageCycleTest<request_type, response_type>(request_id, request_obj, response_obj, 
             encode_request_func, decode_request_func,
@@ -489,23 +489,23 @@ TEST_CASE("HTTP3TreeMessage encode and decode registerNodeListenerRequest", "[ht
     registerNodeListenerTest(request_id++, make_tuple("listener3", "https://example.com/path/to/resource?query=param#fragment", true), true);
 }
 
-TEST_CASE("HTTP3TreeMessage encode and decode deregisterNodeListenerRequest", "[http3_tree_message]") {
+TEST_CASE("StreamTreeMessage encode and decode deregisterNodeListenerRequest", "[stream_tree_message]") {
     auto deregisterNodeListenerTest = [](uint16_t request_id, const pair<string, string>& request_obj, bool response_obj) {
         using request_type = pair<string, string>;
         using response_type = bool;
-        uint8_t request_signal = payload_chunk_header::SIGNAL_WWATP_DEREGISTER_LISTENER_REQUEST;
-        uint8_t response_signal = payload_chunk_header::SIGNAL_WWATP_DEREGISTER_LISTENER_RESPONSE;
+        uint8_t request_signal = payload_chunk_header::SIGNAL_WORLWIND_DEREGISTER_LISTENER_REQUEST;
+        uint8_t response_signal = payload_chunk_header::SIGNAL_WORLWIND_DEREGISTER_LISTENER_RESPONSE;
         auto encode_request_func = 
-            [](HTTP3TreeMessage & client_message, request_type const& request_obj) { 
+            [](StreamTreeMessage & client_message, request_type const& request_obj) { 
                 client_message.encode_deregisterNodeListenerRequest(request_obj.first, request_obj.second); };
         auto decode_request_func = 
-            [](HTTP3TreeMessage & server_message) { 
+            [](StreamTreeMessage & server_message) { 
                 return server_message.decode_deregisterNodeListenerRequest(); };
         auto encode_response_func = 
-            [](HTTP3TreeMessage & server_message, response_type const response_obj) { 
+            [](StreamTreeMessage & server_message, response_type const response_obj) { 
                 server_message.encode_deregisterNodeListenerResponse(response_obj); };
         auto decode_response_func = 
-            [](HTTP3TreeMessage & client_message) { 
+            [](StreamTreeMessage & client_message) { 
                 return client_message.decode_deregisterNodeListenerResponse(); };
         messageCycleTest<request_type, response_type>(request_id, request_obj, response_obj, 
             encode_request_func, decode_request_func,
@@ -521,23 +521,23 @@ TEST_CASE("HTTP3TreeMessage encode and decode deregisterNodeListenerRequest", "[
     deregisterNodeListenerTest(request_id++, make_pair("listener3", "https://example.com/path/to/resource?query=param#fragment"), true);
 }
 
-TEST_CASE("HTTP3TreeMessage encode and decode notifyListenersRequest", "[http3_tree_message]") {
+TEST_CASE("StreamTreeMessage encode and decode notifyListenersRequest", "[stream_tree_message]") {
     auto notifyListenersTest = [](uint16_t request_id, pair<string, maybe<TreeNode>> const& request_obj, bool response_obj) {
         using request_type = pair<string, maybe<TreeNode>>;
         using response_type = bool;
-        uint8_t request_signal = payload_chunk_header::SIGNAL_WWATP_NOTIFY_LISTENERS_REQUEST;
-        uint8_t response_signal = payload_chunk_header::SIGNAL_WWATP_NOTIFY_LISTENERS_RESPONSE;
+        uint8_t request_signal = payload_chunk_header::SIGNAL_WORLWIND_NOTIFY_LISTENERS_REQUEST;
+        uint8_t response_signal = payload_chunk_header::SIGNAL_WORLWIND_NOTIFY_LISTENERS_RESPONSE;
         auto encode_request_func = 
-            [](HTTP3TreeMessage & client_message, request_type const& request_obj) { 
+            [](StreamTreeMessage & client_message, request_type const& request_obj) { 
                 client_message.encode_notifyListenersRequest(request_obj.first, request_obj.second); };
         auto decode_request_func = 
-            [](HTTP3TreeMessage & server_message) { 
+            [](StreamTreeMessage & server_message) { 
                 return server_message.decode_notifyListenersRequest(); };
         auto encode_response_func = 
-            [](HTTP3TreeMessage & server_message, response_type const response_obj) { 
+            [](StreamTreeMessage & server_message, response_type const response_obj) { 
                 server_message.encode_notifyListenersResponse(response_obj); };
         auto decode_response_func = 
-            [](HTTP3TreeMessage & client_message) { 
+            [](StreamTreeMessage & client_message) { 
                 return client_message.decode_notifyListenersResponse(); };
         messageCycleTest<request_type, response_type>(request_id, request_obj, response_obj, 
             encode_request_func, decode_request_func,
@@ -564,25 +564,25 @@ TEST_CASE("HTTP3TreeMessage encode and decode notifyListenersRequest", "[http3_t
     notifyListenersTest(request_id++, make_pair("", maybe<TreeNode>()), true);
 }
 
-TEST_CASE("HTTP3TreeMessage encode and decode processNotificationRequest", "[http3_tree_message]") {
+TEST_CASE("StreamTreeMessage encode and decode processNotificationRequest", "[stream_tree_message]") {
     auto processNotificationTest = [](uint16_t request_id, bool request_obj, bool response_obj) {
         using request_type = bool;
         using response_type = bool;
-        uint8_t request_signal = payload_chunk_header::SIGNAL_WWATP_PROCESS_NOTIFICATION_REQUEST;
-        uint8_t response_signal = payload_chunk_header::SIGNAL_WWATP_PROCESS_NOTIFICATION_RESPONSE;
+        uint8_t request_signal = payload_chunk_header::SIGNAL_WORLWIND_PROCESS_NOTIFICATION_REQUEST;
+        uint8_t response_signal = payload_chunk_header::SIGNAL_WORLWIND_PROCESS_NOTIFICATION_RESPONSE;
         auto encode_request_func = 
-            [](HTTP3TreeMessage & client_message, request_type const& request_obj) { 
+            [](StreamTreeMessage & client_message, request_type const& request_obj) { 
                 client_message.encode_processNotificationRequest(); };
         auto decode_request_func = 
-            [&request_obj](HTTP3TreeMessage & server_message) { 
+            [&request_obj](StreamTreeMessage & server_message) { 
                 server_message.decode_processNotificationRequest();
                 return request_obj; // mock up returning the request_obj
             };
         auto encode_response_func = 
-            [](HTTP3TreeMessage & server_message, response_type const response_obj) { 
+            [](StreamTreeMessage & server_message, response_type const response_obj) { 
                 server_message.encode_processNotificationResponse(); };
         auto decode_response_func = 
-            [&response_obj](HTTP3TreeMessage & client_message) { 
+            [&response_obj](StreamTreeMessage & client_message) { 
                 client_message.decode_processNotificationResponse(); 
                 return response_obj; // mock up returning the response_obj
             };
@@ -600,23 +600,23 @@ TEST_CASE("HTTP3TreeMessage encode and decode processNotificationRequest", "[htt
     processNotificationTest(request_id++, true, true);
 }   
 
-TEST_CASE("HTTP3TreeMessage encode and decode getJournalRequest", "[http3_tree_message]") {
+TEST_CASE("StreamTreeMessage encode and decode getJournalRequest", "[stream_tree_message]") {
     auto getJournalRequestTest = [](uint16_t request_id, const SequentialNotification& request_obj, const vector<SequentialNotification>& response_obj) {
         using request_type = SequentialNotification;
         using response_type = vector<SequentialNotification>;
-        uint8_t request_signal = payload_chunk_header::SIGNAL_WWATP_GET_JOURNAL_REQUEST;
-        uint8_t response_signal = payload_chunk_header::SIGNAL_WWATP_GET_JOURNAL_RESPONSE;
+        uint8_t request_signal = payload_chunk_header::SIGNAL_WORLWIND_GET_JOURNAL_REQUEST;
+        uint8_t response_signal = payload_chunk_header::SIGNAL_WORLWIND_GET_JOURNAL_RESPONSE;
         auto encode_request_func = 
-            [](HTTP3TreeMessage & client_message, request_type const& request_obj) { 
+            [](StreamTreeMessage & client_message, request_type const& request_obj) { 
                 client_message.encode_getJournalRequest(request_obj); };
         auto decode_request_func = 
-            [](HTTP3TreeMessage & server_message) { 
+            [](StreamTreeMessage & server_message) { 
                 return server_message.decode_getJournalRequest(); };
         auto encode_response_func = 
-            [](HTTP3TreeMessage & server_message, response_type const response_obj) { 
+            [](StreamTreeMessage & server_message, response_type const response_obj) { 
                 server_message.encode_getJournalResponse(response_obj); };
         auto decode_response_func = 
-            [](HTTP3TreeMessage & client_message) { 
+            [](StreamTreeMessage & client_message) { 
                 return client_message.decode_getJournalResponse(); };
         messageCycleTest<request_type, response_type>(request_id, request_obj, response_obj, 
             encode_request_func, decode_request_func,

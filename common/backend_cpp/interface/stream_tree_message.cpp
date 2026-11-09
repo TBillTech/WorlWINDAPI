@@ -2,37 +2,37 @@
 
 #include "stream_tree_message.h"
 
-void HTTP3TreeMessage::encode_getNodeRequest(const std::string& label_rule) {
+void StreamTreeMessage::encode_getNodeRequest(const std::string& label_rule) {
     if (isInitialized_) {
-        throw invalid_argument("HTTP3TreeMessage is already initialized");
+        throw invalid_argument("StreamTreeMessage is already initialized");
     }
-    signal_ = payload_chunk_header::SIGNAL_WWATP_GET_NODE_REQUEST;
+    signal_ = payload_chunk_header::SIGNAL_WORLWIND_GET_NODE_REQUEST;
     chunkList encoded = encode_label(request_id_, signal_, label_rule);
     std::lock_guard<std::mutex> lock(requestChunksMutex);
     requestChunks.insert(requestChunks.end(), std::make_move_iterator(encoded.begin()), std::make_move_iterator(encoded.end()));
     isInitialized_ = true;
 }
 
-std::string HTTP3TreeMessage::decode_getNodeRequest(){
+std::string StreamTreeMessage::decode_getNodeRequest(){
     if (!requestComplete) {
-        throw invalid_argument("HTTP3TreeMessage has not been fully recieved");
+        throw invalid_argument("StreamTreeMessage has not been fully recieved");
     }
     std::lock_guard<std::mutex> lock(requestChunksMutex);
     auto decoded = decode_label(requestChunks);
     return decoded.second;
 }
 
-void HTTP3TreeMessage::encode_getNodeResponse(const fplus::maybe<TreeNode>& node) {
-    signal_ = payload_chunk_header::SIGNAL_WWATP_GET_NODE_RESPONSE;
+void StreamTreeMessage::encode_getNodeResponse(const fplus::maybe<TreeNode>& node) {
+    signal_ = payload_chunk_header::SIGNAL_WORLWIND_GET_NODE_RESPONSE;
     chunkList encoded = encode_MaybeTreeNode(request_id_, signal_, node);
     std::lock_guard<std::mutex> lock(responseChunksMutex);
     responseChunks.insert(responseChunks.end(), std::make_move_iterator(encoded.begin()), std::make_move_iterator(encoded.end()));
     responseComplete = true;
 }
 
-fplus::maybe<TreeNode> HTTP3TreeMessage::decode_getNodeResponse() {
+fplus::maybe<TreeNode> StreamTreeMessage::decode_getNodeResponse() {
     if (!responseComplete) {
-        throw invalid_argument("HTTP3TreeMessage response has not been fully recieved");
+        throw invalid_argument("StreamTreeMessage response has not been fully recieved");
     }
     std::lock_guard<std::mutex> lock(responseChunksMutex);
     auto decoded = decode_MaybeTreeNode(responseChunks);
@@ -40,41 +40,41 @@ fplus::maybe<TreeNode> HTTP3TreeMessage::decode_getNodeResponse() {
     return decoded.second;
 }
 
-void HTTP3TreeMessage::encode_upsertNodeRequest(const std::vector<TreeNode>& nodes)
+void StreamTreeMessage::encode_upsertNodeRequest(const std::vector<TreeNode>& nodes)
 {
     if (isInitialized_) {
-        throw invalid_argument("HTTP3TreeMessage is already initialized");
+        throw invalid_argument("StreamTreeMessage is already initialized");
     }
-    signal_ = payload_chunk_header::SIGNAL_WWATP_UPSERT_NODE_REQUEST;
+    signal_ = payload_chunk_header::SIGNAL_WORLWIND_UPSERT_NODE_REQUEST;
     chunkList encoded = encode_VectorTreeNode(request_id_, signal_, nodes);
     std::lock_guard<std::mutex> lock(requestChunksMutex);
     requestChunks.insert(requestChunks.end(), std::make_move_iterator(encoded.begin()), std::make_move_iterator(encoded.end()));
     isInitialized_ = true;
 }
 
-std::vector<TreeNode> HTTP3TreeMessage::decode_upsertNodeRequest()
+std::vector<TreeNode> StreamTreeMessage::decode_upsertNodeRequest()
 {
     if (!requestComplete) {
-        throw invalid_argument("HTTP3TreeMessage has not been fully recieved");
+        throw invalid_argument("StreamTreeMessage has not been fully recieved");
     }
     std::lock_guard<std::mutex> lock(requestChunksMutex);
     auto decoded = decode_VectorTreeNode(requestChunks);
     return decoded.second;
 }
 
-void HTTP3TreeMessage::encode_upsertNodeResponse(bool success)
+void StreamTreeMessage::encode_upsertNodeResponse(bool success)
 {
-    signal_ = payload_chunk_header::SIGNAL_WWATP_UPSERT_NODE_RESPONSE;
+    signal_ = payload_chunk_header::SIGNAL_WORLWIND_UPSERT_NODE_RESPONSE;
     chunkList encoded = encode_label(request_id_, signal_, to_string(success));
     std::lock_guard<std::mutex> lock(responseChunksMutex);
     responseChunks.insert(responseChunks.end(), std::make_move_iterator(encoded.begin()), std::make_move_iterator(encoded.end()));
     responseComplete = true;
 }
 
-bool HTTP3TreeMessage::decode_upsertNodeResponse()
+bool StreamTreeMessage::decode_upsertNodeResponse()
 {
     if (!responseComplete) {
-        throw invalid_argument("HTTP3TreeMessage response has not been fully recieved");
+        throw invalid_argument("StreamTreeMessage response has not been fully recieved");
     }
     std::lock_guard<std::mutex> lock(responseChunksMutex);
     auto decoded = decode_label(responseChunks);
@@ -85,41 +85,41 @@ bool HTTP3TreeMessage::decode_upsertNodeResponse()
     return success;
 }
 
-void HTTP3TreeMessage::encode_deleteNodeRequest(const std::string& label_rule)
+void StreamTreeMessage::encode_deleteNodeRequest(const std::string& label_rule)
 {
     if (isInitialized_) {
-        throw invalid_argument("HTTP3TreeMessage is already initialized");
+        throw invalid_argument("StreamTreeMessage is already initialized");
     }
-    signal_ = payload_chunk_header::SIGNAL_WWATP_DELETE_NODE_REQUEST;
+    signal_ = payload_chunk_header::SIGNAL_WORLWIND_DELETE_NODE_REQUEST;
     chunkList encoded = encode_label(request_id_, signal_, label_rule);
     std::lock_guard<std::mutex> lock(requestChunksMutex);
     requestChunks.insert(requestChunks.end(), std::make_move_iterator(encoded.begin()), std::make_move_iterator(encoded.end()));
     isInitialized_ = true;
 }
 
-std::string HTTP3TreeMessage::decode_deleteNodeRequest()
+std::string StreamTreeMessage::decode_deleteNodeRequest()
 {
     if (!requestComplete) {
-        throw invalid_argument("HTTP3TreeMessage has not been fully recieved");
+        throw invalid_argument("StreamTreeMessage has not been fully recieved");
     }
     std::lock_guard<std::mutex> lock(requestChunksMutex);
     auto decoded = decode_label(requestChunks);
     return decoded.second;
 }
 
-void HTTP3TreeMessage::encode_deleteNodeResponse(bool success)
+void StreamTreeMessage::encode_deleteNodeResponse(bool success)
 {
-    signal_ = payload_chunk_header::SIGNAL_WWATP_DELETE_NODE_RESPONSE;
+    signal_ = payload_chunk_header::SIGNAL_WORLWIND_DELETE_NODE_RESPONSE;
     chunkList encoded = encode_label(request_id_, signal_, to_string(success));
     std::lock_guard<std::mutex> lock(responseChunksMutex);
     responseChunks.insert(responseChunks.end(), std::make_move_iterator(encoded.begin()), std::make_move_iterator(encoded.end()));
     responseComplete = true;
 }
 
-bool HTTP3TreeMessage::decode_deleteNodeResponse()
+bool StreamTreeMessage::decode_deleteNodeResponse()
 {
     if (!responseComplete) {
-        throw invalid_argument("HTTP3TreeMessage response has not been fully recieved");
+        throw invalid_argument("StreamTreeMessage response has not been fully recieved");
     }
     std::lock_guard<std::mutex> lock(responseChunksMutex);
     auto decoded = decode_label(responseChunks);
@@ -130,41 +130,41 @@ bool HTTP3TreeMessage::decode_deleteNodeResponse()
     return success;
 }
 
-void HTTP3TreeMessage::encode_getPageTreeRequest(const std::string& page_node_label_rule)
+void StreamTreeMessage::encode_getPageTreeRequest(const std::string& page_node_label_rule)
 {
     if (isInitialized_) {
-        throw invalid_argument("HTTP3TreeMessage is already initialized");
+        throw invalid_argument("StreamTreeMessage is already initialized");
     }
-    signal_ = payload_chunk_header::SIGNAL_WWATP_GET_PAGE_TREE_REQUEST;
+    signal_ = payload_chunk_header::SIGNAL_WORLWIND_GET_PAGE_TREE_REQUEST;
     chunkList encoded = encode_label(request_id_, signal_, page_node_label_rule);
     std::lock_guard<std::mutex> lock(requestChunksMutex);
     requestChunks.insert(requestChunks.end(), std::make_move_iterator(encoded.begin()), std::make_move_iterator(encoded.end()));
     isInitialized_ = true;
 }
 
-std::string HTTP3TreeMessage::decode_getPageTreeRequest()
+std::string StreamTreeMessage::decode_getPageTreeRequest()
 {
     if (!requestComplete) {
-        throw invalid_argument("HTTP3TreeMessage has not been fully recieved");
+        throw invalid_argument("StreamTreeMessage has not been fully recieved");
     }
     std::lock_guard<std::mutex> lock(requestChunksMutex);
     auto decoded = decode_label(requestChunks);
     return decoded.second;
 }
 
-void HTTP3TreeMessage::encode_getPageTreeResponse(const std::vector<TreeNode>& nodes)
+void StreamTreeMessage::encode_getPageTreeResponse(const std::vector<TreeNode>& nodes)
 {
-    signal_ = payload_chunk_header::SIGNAL_WWATP_GET_PAGE_TREE_RESPONSE;
+    signal_ = payload_chunk_header::SIGNAL_WORLWIND_GET_PAGE_TREE_RESPONSE;
     chunkList encoded = encode_VectorTreeNode(request_id_, signal_, nodes);
     std::lock_guard<std::mutex> lock(responseChunksMutex);
     responseChunks.insert(responseChunks.end(), std::make_move_iterator(encoded.begin()), std::make_move_iterator(encoded.end()));
     responseComplete = true;
 }
 
-std::vector<TreeNode> HTTP3TreeMessage::decode_getPageTreeResponse()
+std::vector<TreeNode> StreamTreeMessage::decode_getPageTreeResponse()
 {
     if (!responseComplete) {
-        throw invalid_argument("HTTP3TreeMessage response has not been fully recieved");
+        throw invalid_argument("StreamTreeMessage response has not been fully recieved");
     }
     std::lock_guard<std::mutex> lock(responseChunksMutex);
     auto decoded = decode_VectorTreeNode(responseChunks);
@@ -172,41 +172,41 @@ std::vector<TreeNode> HTTP3TreeMessage::decode_getPageTreeResponse()
     return decoded.second;
 }
 
-void HTTP3TreeMessage::encode_getQueryNodesRequest(const std::string& label_rule)
+void StreamTreeMessage::encode_getQueryNodesRequest(const std::string& label_rule)
 {
     if (isInitialized_) {
-        throw invalid_argument("HTTP3TreeMessage is already initialized");
+        throw invalid_argument("StreamTreeMessage is already initialized");
     }
-    signal_ = payload_chunk_header::SIGNAL_WWATP_QUERY_NODES_REQUEST;
+    signal_ = payload_chunk_header::SIGNAL_WORLWIND_QUERY_NODES_REQUEST;
     chunkList encoded = encode_label(request_id_, signal_, label_rule);
     std::lock_guard<std::mutex> lock(requestChunksMutex);
     requestChunks.insert(requestChunks.end(), std::make_move_iterator(encoded.begin()), std::make_move_iterator(encoded.end()));
     isInitialized_ = true;
 }
 
-std::string HTTP3TreeMessage::decode_getQueryNodesRequest()
+std::string StreamTreeMessage::decode_getQueryNodesRequest()
 {
     if (!requestComplete) {
-        throw invalid_argument("HTTP3TreeMessage has not been fully recieved");
+        throw invalid_argument("StreamTreeMessage has not been fully recieved");
     }
     std::lock_guard<std::mutex> lock(requestChunksMutex);
     auto decoded = decode_label(requestChunks);
     return decoded.second;
 }
 
-void HTTP3TreeMessage::encode_getQueryNodesResponse(const std::vector<TreeNode>& nodes)
+void StreamTreeMessage::encode_getQueryNodesResponse(const std::vector<TreeNode>& nodes)
 {
-    signal_ = payload_chunk_header::SIGNAL_WWATP_QUERY_NODES_RESPONSE;
+    signal_ = payload_chunk_header::SIGNAL_WORLWIND_QUERY_NODES_RESPONSE;
     chunkList encoded = encode_VectorTreeNode(request_id_, signal_, nodes);
     std::lock_guard<std::mutex> lock(responseChunksMutex);
     responseChunks.insert(responseChunks.end(), std::make_move_iterator(encoded.begin()), std::make_move_iterator(encoded.end()));
     responseComplete = true;
 }
 
-std::vector<TreeNode> HTTP3TreeMessage::decode_getQueryNodesResponse()
+std::vector<TreeNode> StreamTreeMessage::decode_getQueryNodesResponse()
 {
     if (!responseComplete) {
-        throw invalid_argument("HTTP3TreeMessage response has not been fully recieved");
+        throw invalid_argument("StreamTreeMessage response has not been fully recieved");
     }
     std::lock_guard<std::mutex> lock(responseChunksMutex);
     auto decoded = decode_VectorTreeNode(responseChunks);
@@ -214,22 +214,22 @@ std::vector<TreeNode> HTTP3TreeMessage::decode_getQueryNodesResponse()
     return decoded.second;
 }
 
-void HTTP3TreeMessage::encode_openTransactionLayerRequest(const TreeNode& node)
+void StreamTreeMessage::encode_openTransactionLayerRequest(const TreeNode& node)
 {
     if (isInitialized_) {
-        throw invalid_argument("HTTP3TreeMessage is already initialized");
+        throw invalid_argument("StreamTreeMessage is already initialized");
     }
-    signal_ = payload_chunk_header::SIGNAL_WWATP_OPEN_TRANSACTION_LAYER_REQUEST;
+    signal_ = payload_chunk_header::SIGNAL_WORLWIND_OPEN_TRANSACTION_LAYER_REQUEST;
     chunkList encoded = encode_MaybeTreeNode(request_id_, signal_, fplus::maybe<TreeNode>(node));
     std::lock_guard<std::mutex> lock(requestChunksMutex);
     requestChunks.insert(requestChunks.end(), std::make_move_iterator(encoded.begin()), std::make_move_iterator(encoded.end()));
     isInitialized_ = true;
 }
 
-TreeNode HTTP3TreeMessage::decode_openTransactionLayerRequest()
+TreeNode StreamTreeMessage::decode_openTransactionLayerRequest()
 {
     if (!requestComplete) {
-        throw invalid_argument("HTTP3TreeMessage has not been fully recieved");
+        throw invalid_argument("StreamTreeMessage has not been fully recieved");
     }
     std::lock_guard<std::mutex> lock(requestChunksMutex);
     auto decoded = decode_MaybeTreeNode(requestChunks);
@@ -239,19 +239,19 @@ TreeNode HTTP3TreeMessage::decode_openTransactionLayerRequest()
     return decoded.second.unsafe_get_just();
 }
 
-void HTTP3TreeMessage::encode_openTransactionLayerResponse(bool success)
+void StreamTreeMessage::encode_openTransactionLayerResponse(bool success)
 {
-    signal_ = payload_chunk_header::SIGNAL_WWATP_OPEN_TRANSACTION_LAYER_RESPONSE;
+    signal_ = payload_chunk_header::SIGNAL_WORLWIND_OPEN_TRANSACTION_LAYER_RESPONSE;
     chunkList encoded = encode_label(request_id_, signal_, to_string(success));
     std::lock_guard<std::mutex> lock(responseChunksMutex);
     responseChunks.insert(responseChunks.end(), std::make_move_iterator(encoded.begin()), std::make_move_iterator(encoded.end()));
     responseComplete = true;
 }
 
-bool HTTP3TreeMessage::decode_openTransactionLayerResponse()
+bool StreamTreeMessage::decode_openTransactionLayerResponse()
 {
     if (!responseComplete) {
-        throw invalid_argument("HTTP3TreeMessage response has not been fully recieved");
+        throw invalid_argument("StreamTreeMessage response has not been fully recieved");
     }
     std::lock_guard<std::mutex> lock(responseChunksMutex);
     auto decoded = decode_label(responseChunks);
@@ -262,38 +262,38 @@ bool HTTP3TreeMessage::decode_openTransactionLayerResponse()
     return success;
 }
 
-void HTTP3TreeMessage::encode_closeTransactionLayersRequest()
+void StreamTreeMessage::encode_closeTransactionLayersRequest()
 {
     if (isInitialized_) {
-        throw invalid_argument("HTTP3TreeMessage is already initialized");
+        throw invalid_argument("StreamTreeMessage is already initialized");
     }
-    signal_ = payload_chunk_header::SIGNAL_WWATP_CLOSE_TRANSACTION_LAYERS_REQUEST;
+    signal_ = payload_chunk_header::SIGNAL_WORLWIND_CLOSE_TRANSACTION_LAYERS_REQUEST;
     chunkList encoded = encode_label(request_id_, signal_, "");
     std::lock_guard<std::mutex> lock(requestChunksMutex);
     requestChunks.insert(requestChunks.end(), std::make_move_iterator(encoded.begin()), std::make_move_iterator(encoded.end()));
     isInitialized_ = true;
 }
 
-void HTTP3TreeMessage::decode_closeTransactionLayersRequest()
+void StreamTreeMessage::decode_closeTransactionLayersRequest()
 {
     std::lock_guard<std::mutex> lock(requestChunksMutex);
     // No data to decode, just mark the request as complete
     requestComplete = true;
 }
 
-void HTTP3TreeMessage::encode_closeTransactionLayersResponse(bool success)
+void StreamTreeMessage::encode_closeTransactionLayersResponse(bool success)
 {
-    signal_ = payload_chunk_header::SIGNAL_WWATP_CLOSE_TRANSACTION_LAYERS_RESPONSE;
+    signal_ = payload_chunk_header::SIGNAL_WORLWIND_CLOSE_TRANSACTION_LAYERS_RESPONSE;
     chunkList encoded = encode_label(request_id_, signal_, to_string(success));
     std::lock_guard<std::mutex> lock(responseChunksMutex);
     responseChunks.insert(responseChunks.end(), std::make_move_iterator(encoded.begin()), std::make_move_iterator(encoded.end()));
     responseComplete = true;
 }
 
-bool HTTP3TreeMessage::decode_closeTransactionLayersResponse()
+bool StreamTreeMessage::decode_closeTransactionLayersResponse()
 {
     if (!responseComplete) {
-        throw invalid_argument("HTTP3TreeMessage response has not been fully recieved");
+        throw invalid_argument("StreamTreeMessage response has not been fully recieved");
     }
     std::lock_guard<std::mutex> lock(responseChunksMutex);
     auto decoded = decode_label(responseChunks);
@@ -304,41 +304,41 @@ bool HTTP3TreeMessage::decode_closeTransactionLayersResponse()
     return success;
 }
 
-void HTTP3TreeMessage::encode_applyTransactionRequest(const Transaction& transaction)
+void StreamTreeMessage::encode_applyTransactionRequest(const Transaction& transaction)
 {
     if (isInitialized_) {
-        throw invalid_argument("HTTP3TreeMessage is already initialized");
+        throw invalid_argument("StreamTreeMessage is already initialized");
     }
-    signal_ = payload_chunk_header::SIGNAL_WWATP_APPLY_TRANSACTION_REQUEST;
+    signal_ = payload_chunk_header::SIGNAL_WORLWIND_APPLY_TRANSACTION_REQUEST;
     chunkList encoded = encode_Transaction(request_id_, signal_, transaction);
     std::lock_guard<std::mutex> lock(requestChunksMutex);
     requestChunks.insert(requestChunks.end(), std::make_move_iterator(encoded.begin()), std::make_move_iterator(encoded.end()));
     isInitialized_ = true;
 }
 
-Transaction HTTP3TreeMessage::decode_applyTransactionRequest()
+Transaction StreamTreeMessage::decode_applyTransactionRequest()
 {
     if (!requestComplete) {
-        throw invalid_argument("HTTP3TreeMessage has not been fully recieved");
+        throw invalid_argument("StreamTreeMessage has not been fully recieved");
     }
     std::lock_guard<std::mutex> lock(requestChunksMutex);
     auto decoded = decode_Transaction(requestChunks);
     return decoded.second;
 }
 
-void HTTP3TreeMessage::encode_applyTransactionResponse(bool success)
+void StreamTreeMessage::encode_applyTransactionResponse(bool success)
 {
-    signal_ = payload_chunk_header::SIGNAL_WWATP_APPLY_TRANSACTION_RESPONSE;
+    signal_ = payload_chunk_header::SIGNAL_WORLWIND_APPLY_TRANSACTION_RESPONSE;
     chunkList encoded = encode_label(request_id_, signal_, to_string(success));
     std::lock_guard<std::mutex> lock(responseChunksMutex);
     responseChunks.insert(responseChunks.end(), std::make_move_iterator(encoded.begin()), std::make_move_iterator(encoded.end()));
     responseComplete = true;
 }
 
-bool HTTP3TreeMessage::decode_applyTransactionResponse()
+bool StreamTreeMessage::decode_applyTransactionResponse()
 {
     if (!responseComplete) {
-        throw invalid_argument("HTTP3TreeMessage response has not been fully recieved");
+        throw invalid_argument("StreamTreeMessage response has not been fully recieved");
     }
     std::lock_guard<std::mutex> lock(responseChunksMutex);
     auto decoded = decode_label(responseChunks);
@@ -349,38 +349,38 @@ bool HTTP3TreeMessage::decode_applyTransactionResponse()
     return success;
 }
 
-void HTTP3TreeMessage::encode_getFullTreeRequest()
+void StreamTreeMessage::encode_getFullTreeRequest()
 {
     if (isInitialized_) {
-        throw invalid_argument("HTTP3TreeMessage is already initialized");
+        throw invalid_argument("StreamTreeMessage is already initialized");
     }
-    signal_ = payload_chunk_header::SIGNAL_WWATP_GET_FULL_TREE_REQUEST;
+    signal_ = payload_chunk_header::SIGNAL_WORLWIND_GET_FULL_TREE_REQUEST;
     chunkList encoded = encode_label(request_id_, signal_, "");
     std::lock_guard<std::mutex> lock(requestChunksMutex);
     requestChunks.insert(requestChunks.end(), std::make_move_iterator(encoded.begin()), std::make_move_iterator(encoded.end()));
     isInitialized_ = true;
 }
 
-void HTTP3TreeMessage::decode_getFullTreeRequest()
+void StreamTreeMessage::decode_getFullTreeRequest()
 {
     std::lock_guard<std::mutex> lock(requestChunksMutex);
     // No data to decode, just mark the request as complete
     requestComplete = true;
 }
 
-void HTTP3TreeMessage::encode_getFullTreeResponse(const std::vector<TreeNode>& nodes)
+void StreamTreeMessage::encode_getFullTreeResponse(const std::vector<TreeNode>& nodes)
 {
-    signal_ = payload_chunk_header::SIGNAL_WWATP_GET_FULL_TREE_RESPONSE;
+    signal_ = payload_chunk_header::SIGNAL_WORLWIND_GET_FULL_TREE_RESPONSE;
     chunkList encoded = encode_VectorTreeNode(request_id_, signal_, nodes);
     std::lock_guard<std::mutex> lock(responseChunksMutex);
     responseChunks.insert(responseChunks.end(), std::make_move_iterator(encoded.begin()), std::make_move_iterator(encoded.end()));
     responseComplete = true;
 }
 
-std::vector<TreeNode> HTTP3TreeMessage::decode_getFullTreeResponse()
+std::vector<TreeNode> StreamTreeMessage::decode_getFullTreeResponse()
 {
     if (!responseComplete) {
-        throw invalid_argument("HTTP3TreeMessage response has not been fully recieved");
+        throw invalid_argument("StreamTreeMessage response has not been fully recieved");
     }
     std::lock_guard<std::mutex> lock(responseChunksMutex);
     auto decoded = decode_VectorTreeNode(responseChunks);
@@ -388,22 +388,22 @@ std::vector<TreeNode> HTTP3TreeMessage::decode_getFullTreeResponse()
     return decoded.second;
 }
 
-void HTTP3TreeMessage::encode_registerNodeListenerRequest(const std::string& listener_name, const std::string& label_rule, bool child_notify)
+void StreamTreeMessage::encode_registerNodeListenerRequest(const std::string& listener_name, const std::string& label_rule, bool child_notify)
 {
     if (isInitialized_) {
-        throw invalid_argument("HTTP3TreeMessage is already initialized");
+        throw invalid_argument("StreamTreeMessage is already initialized");
     }
-    signal_ = payload_chunk_header::SIGNAL_WWATP_REGISTER_LISTENER_REQUEST;
+    signal_ = payload_chunk_header::SIGNAL_WORLWIND_REGISTER_LISTENER_REQUEST;
     chunkList encoded = encode_label(request_id_, signal_, listener_name + " " + label_rule + " " + to_string(child_notify));
     std::lock_guard<std::mutex> lock(requestChunksMutex);
     requestChunks.insert(requestChunks.end(), std::make_move_iterator(encoded.begin()), std::make_move_iterator(encoded.end()));
     isInitialized_ = true;
 }
 
-tuple<std::string, std::string, bool> HTTP3TreeMessage::decode_registerNodeListenerRequest()
+tuple<std::string, std::string, bool> StreamTreeMessage::decode_registerNodeListenerRequest()
 {
     if (!requestComplete) {
-        throw invalid_argument("HTTP3TreeMessage has not been fully recieved");
+        throw invalid_argument("StreamTreeMessage has not been fully recieved");
     }
     std::lock_guard<std::mutex> lock(requestChunksMutex);
     auto decoded = decode_label(requestChunks);
@@ -424,19 +424,19 @@ tuple<std::string, std::string, bool> HTTP3TreeMessage::decode_registerNodeListe
     return {listener_name, label_rule, child_notify};
 }
 
-void HTTP3TreeMessage::encode_registerNodeListenerResponse(bool success)
+void StreamTreeMessage::encode_registerNodeListenerResponse(bool success)
 {
-    signal_ = payload_chunk_header::SIGNAL_WWATP_REGISTER_LISTENER_RESPONSE;
+    signal_ = payload_chunk_header::SIGNAL_WORLWIND_REGISTER_LISTENER_RESPONSE;
     chunkList encoded = encode_label(request_id_, signal_, to_string(success));
     std::lock_guard<std::mutex> lock(responseChunksMutex);
     responseChunks.insert(responseChunks.end(), std::make_move_iterator(encoded.begin()), std::make_move_iterator(encoded.end()));
     responseComplete = true;
 }
 
-bool HTTP3TreeMessage::decode_registerNodeListenerResponse()
+bool StreamTreeMessage::decode_registerNodeListenerResponse()
 {
     if (!responseComplete) {
-        throw invalid_argument("HTTP3TreeMessage response has not been fully recieved");
+        throw invalid_argument("StreamTreeMessage response has not been fully recieved");
     }
     std::lock_guard<std::mutex> lock(responseChunksMutex);
     auto decoded = decode_label(responseChunks);
@@ -447,22 +447,22 @@ bool HTTP3TreeMessage::decode_registerNodeListenerResponse()
     return success;
 }
 
-void HTTP3TreeMessage::encode_deregisterNodeListenerRequest(const std::string& listener_name, const std::string& label_rule)
+void StreamTreeMessage::encode_deregisterNodeListenerRequest(const std::string& listener_name, const std::string& label_rule)
 {
     if (isInitialized_) {
-        throw invalid_argument("HTTP3TreeMessage is already initialized");
+        throw invalid_argument("StreamTreeMessage is already initialized");
     }
-    signal_ = payload_chunk_header::SIGNAL_WWATP_DEREGISTER_LISTENER_REQUEST;
+    signal_ = payload_chunk_header::SIGNAL_WORLWIND_DEREGISTER_LISTENER_REQUEST;
     chunkList encoded = encode_label(request_id_, signal_, listener_name + " " + label_rule);
     std::lock_guard<std::mutex> lock(requestChunksMutex);
     requestChunks.insert(requestChunks.end(), std::make_move_iterator(encoded.begin()), std::make_move_iterator(encoded.end()));
     isInitialized_ = true;
 }
 
-pair<std::string, std::string> HTTP3TreeMessage::decode_deregisterNodeListenerRequest()
+pair<std::string, std::string> StreamTreeMessage::decode_deregisterNodeListenerRequest()
 {
     if (!requestComplete) {
-        throw invalid_argument("HTTP3TreeMessage has not been fully recieved");
+        throw invalid_argument("StreamTreeMessage has not been fully recieved");
     }
     std::lock_guard<std::mutex> lock(requestChunksMutex);
     auto decoded = decode_label(requestChunks);
@@ -477,19 +477,19 @@ pair<std::string, std::string> HTTP3TreeMessage::decode_deregisterNodeListenerRe
     return {listener_name, label_rule};
 }
 
-void HTTP3TreeMessage::encode_deregisterNodeListenerResponse(bool success)
+void StreamTreeMessage::encode_deregisterNodeListenerResponse(bool success)
 {
-    signal_ = payload_chunk_header::SIGNAL_WWATP_DEREGISTER_LISTENER_RESPONSE;
+    signal_ = payload_chunk_header::SIGNAL_WORLWIND_DEREGISTER_LISTENER_RESPONSE;
     chunkList encoded = encode_label(request_id_, signal_, to_string(success));
     std::lock_guard<std::mutex> lock(responseChunksMutex);
     responseChunks.insert(responseChunks.end(), std::make_move_iterator(encoded.begin()), std::make_move_iterator(encoded.end()));
     responseComplete = true;
 }
 
-bool HTTP3TreeMessage::decode_deregisterNodeListenerResponse()
+bool StreamTreeMessage::decode_deregisterNodeListenerResponse()
 {
     if (!responseComplete) {
-        throw invalid_argument("HTTP3TreeMessage response has not been fully recieved");
+        throw invalid_argument("StreamTreeMessage response has not been fully recieved");
     }
     std::lock_guard<std::mutex> lock(responseChunksMutex);
     auto decoded = decode_label(responseChunks);
@@ -500,12 +500,12 @@ bool HTTP3TreeMessage::decode_deregisterNodeListenerResponse()
     return success;
 }
 
-void HTTP3TreeMessage::encode_notifyListenersRequest(const std::string& label_rule, const fplus::maybe<TreeNode>& node)
+void StreamTreeMessage::encode_notifyListenersRequest(const std::string& label_rule, const fplus::maybe<TreeNode>& node)
 {
     if (isInitialized_) {
-        throw invalid_argument("HTTP3TreeMessage is already initialized");
+        throw invalid_argument("StreamTreeMessage is already initialized");
     }
-    signal_ = payload_chunk_header::SIGNAL_WWATP_NOTIFY_LISTENERS_REQUEST;
+    signal_ = payload_chunk_header::SIGNAL_WORLWIND_NOTIFY_LISTENERS_REQUEST;
     chunkList encoded = encode_label(request_id_, signal_, label_rule);
     auto node_chunk = encode_MaybeTreeNode(request_id_, signal_, node);
     encoded.insert(encoded.end(), std::make_move_iterator(node_chunk.begin()), std::make_move_iterator(node_chunk.end()));
@@ -514,10 +514,10 @@ void HTTP3TreeMessage::encode_notifyListenersRequest(const std::string& label_ru
     isInitialized_ = true;
 }
 
-pair<std::string, fplus::maybe<TreeNode> > HTTP3TreeMessage::decode_notifyListenersRequest()
+pair<std::string, fplus::maybe<TreeNode> > StreamTreeMessage::decode_notifyListenersRequest()
 {
     if (!requestComplete) {
-        throw invalid_argument("HTTP3TreeMessage has not been fully recieved");
+        throw invalid_argument("StreamTreeMessage has not been fully recieved");
     }
     std::lock_guard<std::mutex> lock(requestChunksMutex);
     auto decoded = decode_label(requestChunks);
@@ -531,19 +531,19 @@ pair<std::string, fplus::maybe<TreeNode> > HTTP3TreeMessage::decode_notifyListen
     return {label_rule, node.second};
 }
 
-void HTTP3TreeMessage::encode_notifyListenersResponse(bool success)
+void StreamTreeMessage::encode_notifyListenersResponse(bool success)
 {
-    signal_ = payload_chunk_header::SIGNAL_WWATP_NOTIFY_LISTENERS_RESPONSE;
+    signal_ = payload_chunk_header::SIGNAL_WORLWIND_NOTIFY_LISTENERS_RESPONSE;
     chunkList encoded = encode_label(request_id_, signal_, to_string(success));
     std::lock_guard<std::mutex> lock(responseChunksMutex);
     responseChunks.insert(responseChunks.end(), std::make_move_iterator(encoded.begin()), std::make_move_iterator(encoded.end()));
     responseComplete = true;
 }
 
-bool HTTP3TreeMessage::decode_notifyListenersResponse()
+bool StreamTreeMessage::decode_notifyListenersResponse()
 {
     if (!responseComplete) {
-        throw invalid_argument("HTTP3TreeMessage response has not been fully recieved");
+        throw invalid_argument("StreamTreeMessage response has not been fully recieved");
     }
     std::lock_guard<std::mutex> lock(responseChunksMutex);
     auto decoded = decode_label(responseChunks);
@@ -554,51 +554,51 @@ bool HTTP3TreeMessage::decode_notifyListenersResponse()
     return success;
 }
 
-void HTTP3TreeMessage::encode_processNotificationRequest()
+void StreamTreeMessage::encode_processNotificationRequest()
 {
     if (isInitialized_) {
-        throw invalid_argument("HTTP3TreeMessage is already initialized");
+        throw invalid_argument("StreamTreeMessage is already initialized");
     }
-    signal_ = payload_chunk_header::SIGNAL_WWATP_PROCESS_NOTIFICATION_REQUEST;
+    signal_ = payload_chunk_header::SIGNAL_WORLWIND_PROCESS_NOTIFICATION_REQUEST;
     chunkList encoded = encode_label(request_id_, signal_, "");
     std::lock_guard<std::mutex> lock(requestChunksMutex);
     requestChunks.insert(requestChunks.end(), std::make_move_iterator(encoded.begin()), std::make_move_iterator(encoded.end()));
     isInitialized_ = true;
 }
 
-void HTTP3TreeMessage::decode_processNotificationRequest()
+void StreamTreeMessage::decode_processNotificationRequest()
 {
     if (!requestComplete) {
-        throw invalid_argument("HTTP3TreeMessage has not been fully recieved");
+        throw invalid_argument("StreamTreeMessage has not been fully recieved");
     }
     std::lock_guard<std::mutex> lock(requestChunksMutex);
     requestComplete = true;
 }
 
-void HTTP3TreeMessage::encode_processNotificationResponse()
+void StreamTreeMessage::encode_processNotificationResponse()
 {
-    signal_ = payload_chunk_header::SIGNAL_WWATP_PROCESS_NOTIFICATION_RESPONSE;
+    signal_ = payload_chunk_header::SIGNAL_WORLWIND_PROCESS_NOTIFICATION_RESPONSE;
     chunkList encoded = encode_label(request_id_, signal_, "");
     std::lock_guard<std::mutex> lock(responseChunksMutex);
     responseChunks.insert(responseChunks.end(), std::make_move_iterator(encoded.begin()), std::make_move_iterator(encoded.end()));
     responseComplete = true;
 }
 
-void HTTP3TreeMessage::decode_processNotificationResponse()
+void StreamTreeMessage::decode_processNotificationResponse()
 {
     if (!responseComplete) {
-        throw invalid_argument("HTTP3TreeMessage response has not been fully recieved");
+        throw invalid_argument("StreamTreeMessage response has not been fully recieved");
     }
     std::lock_guard<std::mutex> lock(responseChunksMutex);
     processingFinished = true;
 }
 
-void HTTP3TreeMessage::encode_getJournalRequest(SequentialNotification const& last_notification)
+void StreamTreeMessage::encode_getJournalRequest(SequentialNotification const& last_notification)
 {
     if (isInitialized_) {
-        throw invalid_argument("HTTP3TreeMessage is already initialized");
+        throw invalid_argument("StreamTreeMessage is already initialized");
     }
-    signal_ = payload_chunk_header::SIGNAL_WWATP_GET_JOURNAL_REQUEST;
+    signal_ = payload_chunk_header::SIGNAL_WORLWIND_GET_JOURNAL_REQUEST;
     // Just send the uint64_t sequence number in the request
     chunkList encoded = encode_SequentialNotification(request_id_, signal_, 
         {last_notification.first, {"", fplus::maybe<TreeNode>()}});
@@ -608,10 +608,10 @@ void HTTP3TreeMessage::encode_getJournalRequest(SequentialNotification const& la
     isJournalRequest_ = true;
 }
 
-SequentialNotification HTTP3TreeMessage::decode_getJournalRequest()
+SequentialNotification StreamTreeMessage::decode_getJournalRequest()
 {
     if (!requestComplete) {
-        throw invalid_argument("HTTP3TreeMessage has not been fully recieved");
+        throw invalid_argument("StreamTreeMessage has not been fully recieved");
     }
     std::lock_guard<std::mutex> lock(requestChunksMutex);
     auto notification = decode_SequentialNotification(requestChunks);
@@ -623,9 +623,9 @@ SequentialNotification HTTP3TreeMessage::decode_getJournalRequest()
     return notification.second;
 }
 
-void HTTP3TreeMessage::encode_getJournalResponse(const std::vector<SequentialNotification>& notifications)
+void StreamTreeMessage::encode_getJournalResponse(const std::vector<SequentialNotification>& notifications)
 {
-    signal_ = payload_chunk_header::SIGNAL_WWATP_GET_JOURNAL_RESPONSE;
+    signal_ = payload_chunk_header::SIGNAL_WORLWIND_GET_JOURNAL_RESPONSE;
     chunkList encoded = encode_VectorSequentialNotification(request_id_, signal_, notifications);
     std::lock_guard<std::mutex> lock(responseChunksMutex);
     responseChunks.insert(responseChunks.end(), std::make_move_iterator(encoded.begin()), std::make_move_iterator(encoded.end()));
@@ -633,10 +633,10 @@ void HTTP3TreeMessage::encode_getJournalResponse(const std::vector<SequentialNot
     isJournalRequest_ = true;
 }
 
-std::vector<SequentialNotification> HTTP3TreeMessage::decode_getJournalResponse()
+std::vector<SequentialNotification> StreamTreeMessage::decode_getJournalResponse()
 {
     if (!responseComplete) {
-        throw invalid_argument("HTTP3TreeMessage response has not been fully recieved");
+        throw invalid_argument("StreamTreeMessage response has not been fully recieved");
     }
     std::lock_guard<std::mutex> lock(responseChunksMutex);
     auto decoded = decode_VectorSequentialNotification(responseChunks);
@@ -645,9 +645,9 @@ std::vector<SequentialNotification> HTTP3TreeMessage::decode_getJournalResponse(
     return decoded.second;
 }
 
-void HTTP3TreeMessage::setup_staticNodeDataRequest(void) {
+void StreamTreeMessage::setup_staticNodeDataRequest(void) {
     if (isInitialized_) {
-        throw invalid_argument("HTTP3TreeMessage is already initialized");
+        throw invalid_argument("StreamTreeMessage is already initialized");
     }
     signal_ = payload_chunk_header::SIGNAL_OTHER_CHUNK;
     isInitialized_ = true;
@@ -656,7 +656,7 @@ void HTTP3TreeMessage::setup_staticNodeDataRequest(void) {
     requestChunks.emplace_back(tag, true);
 }
 
-void HTTP3TreeMessage::setRequestId(uint16_t request_id) {
+void StreamTreeMessage::setRequestId(uint16_t request_id) {
     request_id_ = request_id;
     for (auto& chunk : requestChunks) {
         if (chunk.get_signal_type() == payload_chunk_header::GLOBAL_SIGNAL_TYPE) {
@@ -666,7 +666,7 @@ void HTTP3TreeMessage::setRequestId(uint16_t request_id) {
     requestComplete = true;
 }
 
-fplus::maybe<shared_span<> > HTTP3TreeMessage::popRequestChunk() {
+fplus::maybe<shared_span<> > StreamTreeMessage::popRequestChunk() {
     std::lock_guard<std::mutex> lock(requestChunksMutex);
     if (requestChunks.empty()) {
         return fplus::nothing<shared_span<>>();
@@ -677,7 +677,7 @@ fplus::maybe<shared_span<> > HTTP3TreeMessage::popRequestChunk() {
 }
 
 
-void HTTP3TreeMessage::pushRequestChunk(shared_span<> chunk) {
+void StreamTreeMessage::pushRequestChunk(shared_span<> chunk) {
     uint8_t signal = chunk.get_signal_signal();
     std::lock_guard<std::mutex> lock(requestChunksMutex);
     requestChunks.push_back(chunk);
@@ -687,49 +687,49 @@ void HTTP3TreeMessage::pushRequestChunk(shared_span<> chunk) {
     }
     auto can_decode = fplus::maybe<size_t>();
     switch (signal) {
-        case payload_chunk_header::SIGNAL_WWATP_GET_NODE_REQUEST:
+        case payload_chunk_header::SIGNAL_WORLWIND_GET_NODE_REQUEST:
             can_decode = can_decode_label(0, requestChunks);
             break;
-        case payload_chunk_header::SIGNAL_WWATP_UPSERT_NODE_REQUEST:
+        case payload_chunk_header::SIGNAL_WORLWIND_UPSERT_NODE_REQUEST:
             can_decode = can_decode_VectorTreeNode(0, requestChunks);
             break;
-        case payload_chunk_header::SIGNAL_WWATP_DELETE_NODE_REQUEST:
+        case payload_chunk_header::SIGNAL_WORLWIND_DELETE_NODE_REQUEST:
             can_decode = can_decode_label(0, requestChunks);
             break;
-        case payload_chunk_header::SIGNAL_WWATP_GET_PAGE_TREE_REQUEST:
+        case payload_chunk_header::SIGNAL_WORLWIND_GET_PAGE_TREE_REQUEST:
             can_decode = can_decode_label(0, requestChunks);
             break;
-        case payload_chunk_header::SIGNAL_WWATP_QUERY_NODES_REQUEST:
+        case payload_chunk_header::SIGNAL_WORLWIND_QUERY_NODES_REQUEST:
             can_decode = can_decode_label(0, requestChunks);
             break;
-        case payload_chunk_header::SIGNAL_WWATP_OPEN_TRANSACTION_LAYER_REQUEST:
+        case payload_chunk_header::SIGNAL_WORLWIND_OPEN_TRANSACTION_LAYER_REQUEST:
             can_decode = can_decode_MaybeTreeNode(0, requestChunks);
             break;
-        case payload_chunk_header::SIGNAL_WWATP_CLOSE_TRANSACTION_LAYERS_REQUEST:
+        case payload_chunk_header::SIGNAL_WORLWIND_CLOSE_TRANSACTION_LAYERS_REQUEST:
             can_decode = can_decode_label(0, requestChunks);
             break;
-        case payload_chunk_header::SIGNAL_WWATP_APPLY_TRANSACTION_REQUEST:
+        case payload_chunk_header::SIGNAL_WORLWIND_APPLY_TRANSACTION_REQUEST:
             can_decode = can_decode_Transaction(0, requestChunks);
             break;
-        case payload_chunk_header::SIGNAL_WWATP_GET_FULL_TREE_REQUEST:
+        case payload_chunk_header::SIGNAL_WORLWIND_GET_FULL_TREE_REQUEST:
             can_decode = can_decode_label(0, requestChunks);
             break;
-        case payload_chunk_header::SIGNAL_WWATP_REGISTER_LISTENER_REQUEST:
+        case payload_chunk_header::SIGNAL_WORLWIND_REGISTER_LISTENER_REQUEST:
             can_decode = can_decode_label(0, requestChunks);
             break;
-        case payload_chunk_header::SIGNAL_WWATP_DEREGISTER_LISTENER_REQUEST:
+        case payload_chunk_header::SIGNAL_WORLWIND_DEREGISTER_LISTENER_REQUEST:
             can_decode = can_decode_label(0, requestChunks);
             break;
-        case payload_chunk_header::SIGNAL_WWATP_NOTIFY_LISTENERS_REQUEST:
+        case payload_chunk_header::SIGNAL_WORLWIND_NOTIFY_LISTENERS_REQUEST:
             can_decode = can_decode_label(0, requestChunks);
             // If decoding the label fails, then MaybeTreeNode will fail too, so attempting 
             // decode at index 0 is OK here.
             can_decode = can_decode_MaybeTreeNode(can_decode.get_with_default(0), requestChunks);
             break;
-        case payload_chunk_header::SIGNAL_WWATP_PROCESS_NOTIFICATION_REQUEST:
+        case payload_chunk_header::SIGNAL_WORLWIND_PROCESS_NOTIFICATION_REQUEST:
             can_decode = can_decode_label(0, requestChunks);
             break;
-        case payload_chunk_header::SIGNAL_WWATP_GET_JOURNAL_REQUEST:
+        case payload_chunk_header::SIGNAL_WORLWIND_GET_JOURNAL_REQUEST:
             can_decode = can_decode_SequentialNotification(0, requestChunks);
             break;
         default:
@@ -740,7 +740,7 @@ void HTTP3TreeMessage::pushRequestChunk(shared_span<> chunk) {
     }
 }
 
-fplus::maybe<shared_span<> > HTTP3TreeMessage::popResponseChunk() {
+fplus::maybe<shared_span<> > StreamTreeMessage::popResponseChunk() {
     std::lock_guard<std::mutex> lock(responseChunksMutex);
     if (responseChunks.empty()) {
         if (responseComplete) {
@@ -753,7 +753,7 @@ fplus::maybe<shared_span<> > HTTP3TreeMessage::popResponseChunk() {
     return chunk;
 }
 
-void HTTP3TreeMessage::pushResponseChunk(shared_span<> chunk) {
+void StreamTreeMessage::pushResponseChunk(shared_span<> chunk) {
     std::lock_guard<std::mutex> lock(responseChunksMutex);
     uint8_t signal_type = chunk.get_signal_type();
     if (signal_type == no_chunk_header::GLOBAL_SIGNAL_TYPE) {
@@ -771,46 +771,46 @@ void HTTP3TreeMessage::pushResponseChunk(shared_span<> chunk) {
     responseChunks.push_back(chunk);
     auto can_decode = fplus::maybe<size_t>();
     switch (signal) {
-        case payload_chunk_header::SIGNAL_WWATP_GET_NODE_RESPONSE:
+        case payload_chunk_header::SIGNAL_WORLWIND_GET_NODE_RESPONSE:
             can_decode = can_decode_MaybeTreeNode(0, responseChunks);
             break;
-        case payload_chunk_header::SIGNAL_WWATP_UPSERT_NODE_RESPONSE:
+        case payload_chunk_header::SIGNAL_WORLWIND_UPSERT_NODE_RESPONSE:
             can_decode = can_decode_label(0, responseChunks);
             break;
-        case payload_chunk_header::SIGNAL_WWATP_DELETE_NODE_RESPONSE:
+        case payload_chunk_header::SIGNAL_WORLWIND_DELETE_NODE_RESPONSE:
             can_decode = can_decode_label(0, responseChunks);
             break;
-        case payload_chunk_header::SIGNAL_WWATP_GET_PAGE_TREE_RESPONSE:
+        case payload_chunk_header::SIGNAL_WORLWIND_GET_PAGE_TREE_RESPONSE:
             can_decode = can_decode_VectorTreeNode(0, responseChunks);
             break;
-        case payload_chunk_header::SIGNAL_WWATP_QUERY_NODES_RESPONSE:
+        case payload_chunk_header::SIGNAL_WORLWIND_QUERY_NODES_RESPONSE:
             can_decode = can_decode_VectorTreeNode(0, responseChunks);
             break;
-        case payload_chunk_header::SIGNAL_WWATP_OPEN_TRANSACTION_LAYER_RESPONSE:
+        case payload_chunk_header::SIGNAL_WORLWIND_OPEN_TRANSACTION_LAYER_RESPONSE:
             can_decode = can_decode_label(0, responseChunks);
             break;
-        case payload_chunk_header::SIGNAL_WWATP_CLOSE_TRANSACTION_LAYERS_RESPONSE:
+        case payload_chunk_header::SIGNAL_WORLWIND_CLOSE_TRANSACTION_LAYERS_RESPONSE:
             can_decode = can_decode_label(0, responseChunks);
             break;
-        case payload_chunk_header::SIGNAL_WWATP_APPLY_TRANSACTION_RESPONSE:
+        case payload_chunk_header::SIGNAL_WORLWIND_APPLY_TRANSACTION_RESPONSE:
             can_decode = can_decode_label(0, responseChunks);
             break;
-        case payload_chunk_header::SIGNAL_WWATP_GET_FULL_TREE_RESPONSE:
+        case payload_chunk_header::SIGNAL_WORLWIND_GET_FULL_TREE_RESPONSE:
             can_decode = can_decode_VectorTreeNode(0, responseChunks);
             break;
-        case payload_chunk_header::SIGNAL_WWATP_REGISTER_LISTENER_RESPONSE:
+        case payload_chunk_header::SIGNAL_WORLWIND_REGISTER_LISTENER_RESPONSE:
             can_decode = can_decode_label(0, responseChunks);
             break;
-        case payload_chunk_header::SIGNAL_WWATP_DEREGISTER_LISTENER_RESPONSE:
+        case payload_chunk_header::SIGNAL_WORLWIND_DEREGISTER_LISTENER_RESPONSE:
             can_decode = can_decode_label(0, responseChunks);
             break;
-        case payload_chunk_header::SIGNAL_WWATP_NOTIFY_LISTENERS_RESPONSE:
+        case payload_chunk_header::SIGNAL_WORLWIND_NOTIFY_LISTENERS_RESPONSE:
             can_decode = can_decode_label(0, responseChunks);
             break;
-        case payload_chunk_header::SIGNAL_WWATP_PROCESS_NOTIFICATION_RESPONSE:
+        case payload_chunk_header::SIGNAL_WORLWIND_PROCESS_NOTIFICATION_RESPONSE:
             can_decode = can_decode_label(0, responseChunks);
             break;
-        case payload_chunk_header::SIGNAL_WWATP_GET_JOURNAL_RESPONSE:
+        case payload_chunk_header::SIGNAL_WORLWIND_GET_JOURNAL_RESPONSE:
             can_decode = can_decode_VectorSequentialNotification(0, responseChunks);
             break;
         default:
@@ -822,7 +822,7 @@ void HTTP3TreeMessage::pushResponseChunk(shared_span<> chunk) {
     }
 }
 
-void HTTP3TreeMessage::reset() {
+void StreamTreeMessage::reset() {
     request_id_ = 0;
     isInitialized_ = false;
     requestComplete = false;

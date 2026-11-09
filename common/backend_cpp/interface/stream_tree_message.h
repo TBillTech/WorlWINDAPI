@@ -10,7 +10,7 @@ constexpr const string& get_signal_string(uint8_t signal);
 
 using chunkList = std::list<shared_span<>>;
 
-// The http3_tree_message is a psuedo-backend which kind of adheres to the backend.h interface
+// The stream_tree_message is a psuedo-backend which kind of adheres to the backend.h interface
 // for simplicity.  It is not a real backend, but rather a converter that converts the method
 // calls into a chunks list, which can then be easily shipped as a request to the server.
 
@@ -18,16 +18,16 @@ using chunkList = std::list<shared_span<>>;
 // The request methods initialize the class, and the response methods collect the result once the
 // server has responded.
 
-class HTTP3TreeMessage {
+class StreamTreeMessage {
 public:
-    HTTP3TreeMessage(uint16_t request_id = 0, uint8_t signal = 0) 
+    StreamTreeMessage(uint16_t request_id = 0, uint8_t signal = 0) 
         : request_id_(request_id), signal_(signal) {
         // Constructor
     };
-    ~HTTP3TreeMessage() = default;
+    ~StreamTreeMessage() = default;
 
-    HTTP3TreeMessage(const HTTP3TreeMessage&) = delete; // No copy constructor
-    HTTP3TreeMessage& operator=(const HTTP3TreeMessage&) = delete; // No copy assignment
+    StreamTreeMessage(const StreamTreeMessage&) = delete; // No copy constructor
+    StreamTreeMessage& operator=(const StreamTreeMessage&) = delete; // No copy assignment
 
     // Tree Node format input and output methods
     // Each nominal backend method needs encode and docode for the request side,
@@ -142,7 +142,7 @@ public:
         return request_id_;
     }
  
-    HTTP3TreeMessage(const HTTP3TreeMessage&& other) :
+    StreamTreeMessage(const StreamTreeMessage&& other) :
         request_id_(other.request_id_),
         signal_(other.signal_),
         isInitialized_(other.isInitialized_),
@@ -158,11 +158,11 @@ private:
     // loosely, the process is broken down into stages:
     // 1. The class is constructed unitialized
     // 2. A method is selected and called to initialize the class data and state
-    // 3. The Http3ClientBackendUpdater maintainRequestHandlers provides a stream identifier, 
+    // 3. The StreamClientBackendUpdater maintainRequestHandlers provides a stream identifier, 
     //    the chunkList for the wire a produced, and the handler is registered with the quic connector 
     // 4. The handler consumes the request chunkList and sends them to the server
     // 5. The handler appends response chunkList until the response is complete
-    // 6. The HTTP3ClientBackend processFinishedRequest method is called, which will call the appropriate response method
+    // 6. The StreamClientBackend processFinishedRequest method is called, which will call the appropriate response method
     uint16_t request_id_;
     uint8_t signal_;
 

@@ -8,7 +8,7 @@
 class Communication;
 
 /**
- * Frontend - Abstract base class for all WWATP frontend components
+ * Frontend - Abstract base class for all WorlWIND frontend components
  * 
  * This base class provides a common interface for frontend components that
  * interact with Backend instances. Frontends can be mediators, servers, 
@@ -34,7 +34,7 @@ public:
     virtual std::string getName() const = 0;
 
     /**
-     * Get the type of frontend (e.g., "cloning_mediator", "yaml_mediator", "http3_server")
+     * Get the type of frontend (e.g., "cloning_mediator", "yaml_mediator", "stream_server")
      * @return Frontend type string
      */
     virtual std::string getType() const = 0;

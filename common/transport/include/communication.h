@@ -137,18 +137,18 @@ public:
     // Thus, either the StreamIdentifier maps to a single open Stream, 
     //    OR the StreamIdentifier maps to a single URL/Request that can be used to open a new Stream.
     // The workflow comments below assume a QUIC transport protocol, however, other transport protocols such as a socket
-    // can implement and emulate the same behavior. In these cases, the HTTP3 details are abstract/notional instead of precise.
+    // can implement and emulate the same behavior. In these cases, the Stream details are abstract/notional instead of precise.
     
     // NOTE: This means that sometimes the client will need to send a flush message to the server, which can just be a heartbeat signal. 
 
-    // ## "client" side communication model: worker threads + HTTP3 IO thread
+    // ## "client" side communication model: worker threads + Stream IO thread
     // worker thread gets a StreamIdentifier from the Communication object by requesting a new StreamIdentifier for a URL/Request
     // worker thread calls registerResponseHandler, which adds a mapping from the StreamIdentifier to the callback.
     // worker thread calls processRequestStream, which handles incoming and outgoing chunks as arguments and returns to the callback.
-    // HTTP3 IO thread checks if there are any outgoing chunks to send for a URL/Request and no open stream for it,
-    //    and if so, HTTP3 IO thread creates a new open stream.
-    // HTTP3 IO thread sends any outgoing chunks over the now opened stream.  IF all outgoing chunks have been sent, then also send FIN.
-    // HTTP3 IO thread receives bytes from open streams, and puts them on the incoming chunk queue.
+    // Stream IO thread checks if there are any outgoing chunks to send for a URL/Request and no open stream for it,
+    //    and if so, Stream IO thread creates a new open stream.
+    // Stream IO thread sends any outgoing chunks over the now opened stream.  IF all outgoing chunks have been sent, then also send FIN.
+    // Stream IO thread receives bytes from open streams, and puts them on the incoming chunk queue.
     // Thus the following queues and maps are needed:
     // 1. stream_callbacks requestorQueue: For mapping StreamIdentifiers to callbacks
     // 2. stream_data_chunks incomingChunks: For mapping incoming chunks to StreamIdentifiers
@@ -165,13 +165,13 @@ public:
     // ## "server" side communication model
     // worker thread calls registerRequestHandler to support associated the right callback with a new stream object;
     //     This in effect maps an incoming URL/Request to a callback function.
-    // HTTP3 IO thread receives request bytes from the wire, and creates a new Stream object to handle the request.  
+    // Stream IO thread receives request bytes from the wire, and creates a new Stream object to handle the request.  
     //     Note that since this ULR/Request is in the headers, the Stream object can immediately be associated with a callback.
-    // For open streams, HTTP3 IO thread receives request chunks for an open stream, and puts them on the incoming chunk queue (until client FIN).
+    // For open streams, Stream IO thread receives request chunks for an open stream, and puts them on the incoming chunk queue (until client FIN).
     //     Note that only after FIN can the StreamIdentifier be read from the request stream, and so after FIN is when the responderQueue is populated.
     //     This further means that the communication (ngtcp2_cid) handler needs to keep track of the which StreamIdentifiers
     //     map to which URL/Request.
-    // For open streams, HTTP3 IO thread checks if the FIN has arrived,
+    // For open streams, Stream IO thread checks if the FIN has arrived,
     //     and if so sends outgoing chunks to the stream.  If all outgoing chunks have been sent, then also send FIN.
     // worker thread calls processResponseStream, which pops the requestHandler from the responderQueue, 
     //     and processed incoming to outgoing chunks through the callback for the requestHandler.

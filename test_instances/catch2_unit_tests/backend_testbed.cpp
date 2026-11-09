@@ -3,7 +3,7 @@
 #include <cassert>
 
 // Ensure assert checks are honored even when built with NDEBUG (e.g., Release builds).
-// In that case, map assert to throwing a runtime_error so http3_client_backend_tester still enforces conditions.
+// In that case, map assert to throwing a runtime_error so stream_client_backend_tester still enforces conditions.
 #ifdef NDEBUG
 #undef assert
 #define assert(expr) do { if(!(expr)) throw std::runtime_error("Assertion failed: " #expr); } while(0)
@@ -26,7 +26,7 @@ TreeNode createNoContentTreeNode(string label_rule, string description, vector<T
 TreeNode createAnimalNode(string animal, string description, vector<TreeNode::PropertyInfo> property_infos, 
     TreeNodeVersion version, vector<string> child_names, 
     vector<string> property_data, string query_how_to, string qa_sequence) {
-    payload_chunk_header header(0, payload_chunk_header::SIGNAL_WWATP_UPSERT_NODE_REQUEST, 0);
+    payload_chunk_header header(0, payload_chunk_header::SIGNAL_WORLWIND_UPSERT_NODE_REQUEST, 0);
     shared_span<> animal_data(header, true);
     pair<bool, pair<size_t, size_t>> next = {false, {0, 0}};
     uint16_t index = 0;

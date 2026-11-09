@@ -5,7 +5,7 @@ disable-model-invocation: true
 ---
 # Create Ticket (GitHub Issue format)
 
-You are acting as the WWATP Architect agent, creating a GitHub Issue.  
+You are acting as the WORLWIND Architect agent, creating a GitHub Issue.  
 
 Output a GitHub Issue draft. Clearly separate the Title (single line) from the Body so the user can paste them into VS Code’s New Issue editor.
 

@@ -316,7 +316,7 @@ TEST_CASE("FileBackend test", "[FileBackend]") {
 }
 
 TEST_CASE("FileBackend filesystem operations", "[FileBackend][filesystem]") {
-    const auto test_root = std::filesystem::temp_directory_path() / "wwatp_file_backend_filesystem_test";
+    const auto test_root = std::filesystem::temp_directory_path() / "worlwind_file_backend_filesystem_test";
     std::filesystem::remove_all(test_root);
     std::filesystem::create_directories(test_root);
     const auto base_path = test_root.string() + "/";

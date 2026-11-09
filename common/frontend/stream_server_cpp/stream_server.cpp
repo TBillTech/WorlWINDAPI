@@ -1,7 +1,7 @@
 #include "stream_tree_message.h"
 #include "stream_server.h"
 
-chunks Http3ServerRoute::processResponseStream(const StreamIdentifier& stream_id, chunks& request) {
+chunks StreamServerRoute::processResponseStream(const StreamIdentifier& stream_id, chunks& request) {
     chunks response;
     // Process the request and return the response
     auto it = ongoingResponses_.find(stream_id);
@@ -10,7 +10,7 @@ chunks Http3ServerRoute::processResponseStream(const StreamIdentifier& stream_id
             // If there is heretofore no request information, we don't know how to respond yet.
             return response;
         }
-        HTTP3TreeMessage state = intializeResponseMessage(stream_id, request);
+        StreamTreeMessage state = intializeResponseMessage(stream_id, request);
         ongoingResponses_.emplace(stream_id, std::move(state));
         it = ongoingResponses_.find(stream_id);
     }
@@ -47,70 +47,70 @@ chunks Http3ServerRoute::processResponseStream(const StreamIdentifier& stream_id
     return response;
 }
 
-void Http3ServerRoute::buildResponseChunks(HTTP3TreeMessage& requested) {
+void StreamServerRoute::buildResponseChunks(StreamTreeMessage& requested) {
     switch (requested.getSignal()) {
-        case payload_chunk_header::SIGNAL_WWATP_GET_NODE_REQUEST:
+        case payload_chunk_header::SIGNAL_WORLWIND_GET_NODE_REQUEST:
             {
                 auto node_label = requested.decode_getNodeRequest();
                 auto node = backend_.getNode(node_label);
                 requested.encode_getNodeResponse(node);
             }
             break;
-        case payload_chunk_header::SIGNAL_WWATP_UPSERT_NODE_REQUEST:
+        case payload_chunk_header::SIGNAL_WORLWIND_UPSERT_NODE_REQUEST:
             {
                 auto nodes = requested.decode_upsertNodeRequest();
                 backend_.upsertNode(nodes);
                 requested.encode_upsertNodeResponse(true);
             }
             break;
-        case payload_chunk_header::SIGNAL_WWATP_DELETE_NODE_REQUEST:
+        case payload_chunk_header::SIGNAL_WORLWIND_DELETE_NODE_REQUEST:
             {
                 auto node_label = requested.decode_deleteNodeRequest();
                 backend_.deleteNode(node_label);
                 requested.encode_deleteNodeResponse(true);
             }
             break;
-        case payload_chunk_header::SIGNAL_WWATP_GET_PAGE_TREE_REQUEST:
+        case payload_chunk_header::SIGNAL_WORLWIND_GET_PAGE_TREE_REQUEST:
             {
                 auto page_node_label_rule = requested.decode_getPageTreeRequest();
                 auto nodes = backend_.getPageTree(page_node_label_rule);
                 requested.encode_getPageTreeResponse(nodes);
             }
             break;
-        case payload_chunk_header::SIGNAL_WWATP_QUERY_NODES_REQUEST:
+        case payload_chunk_header::SIGNAL_WORLWIND_QUERY_NODES_REQUEST:
             {
                 auto nodes = requested.decode_getQueryNodesRequest();
                 auto nodes_response = backend_.queryNodes(nodes);
                 requested.encode_getQueryNodesResponse(nodes_response);
             }
             break;
-        case payload_chunk_header::SIGNAL_WWATP_OPEN_TRANSACTION_LAYER_REQUEST:
+        case payload_chunk_header::SIGNAL_WORLWIND_OPEN_TRANSACTION_LAYER_REQUEST:
             {
                 auto node = requested.decode_openTransactionLayerRequest();
                 backend_.openTransactionLayer(node);
                 requested.encode_openTransactionLayerResponse(true);
             }
             break;
-        case payload_chunk_header::SIGNAL_WWATP_CLOSE_TRANSACTION_LAYERS_REQUEST:
+        case payload_chunk_header::SIGNAL_WORLWIND_CLOSE_TRANSACTION_LAYERS_REQUEST:
             {
                 backend_.closeTransactionLayers();
                 requested.encode_closeTransactionLayersResponse(true);
             }
             break;
-        case payload_chunk_header::SIGNAL_WWATP_APPLY_TRANSACTION_REQUEST:
+        case payload_chunk_header::SIGNAL_WORLWIND_APPLY_TRANSACTION_REQUEST:
             {
                 auto transaction = requested.decode_applyTransactionRequest();
                 backend_.applyTransaction(transaction);
                 requested.encode_applyTransactionResponse(true);
             }
             break;
-        case payload_chunk_header::SIGNAL_WWATP_GET_FULL_TREE_REQUEST:
+        case payload_chunk_header::SIGNAL_WORLWIND_GET_FULL_TREE_REQUEST:
             {
                 auto nodes = backend_.getFullTree();
                 requested.encode_getFullTreeResponse(nodes);
             }
             break;
-        case payload_chunk_header::SIGNAL_WWATP_REGISTER_LISTENER_REQUEST:
+        case payload_chunk_header::SIGNAL_WORLWIND_REGISTER_LISTENER_REQUEST:
             {
                 auto listener_info = requested.decode_registerNodeListenerRequest();
                 string node_label = std::get<1>(listener_info);
@@ -151,7 +151,7 @@ void Http3ServerRoute::buildResponseChunks(HTTP3TreeMessage& requested) {
                 requested.encode_registerNodeListenerResponse(true);
             }
             break;
-        case payload_chunk_header::SIGNAL_WWATP_DEREGISTER_LISTENER_REQUEST:
+        case payload_chunk_header::SIGNAL_WORLWIND_DEREGISTER_LISTENER_REQUEST:
             {
                 auto listener_info = requested.decode_deregisterNodeListenerRequest();
                 // Deregestering the listener is not supported, since the notifications
@@ -159,7 +159,7 @@ void Http3ServerRoute::buildResponseChunks(HTTP3TreeMessage& requested) {
                 requested.encode_deregisterNodeListenerResponse(false);
             }
             break;
-        case payload_chunk_header::SIGNAL_WWATP_NOTIFY_LISTENERS_REQUEST:
+        case payload_chunk_header::SIGNAL_WORLWIND_NOTIFY_LISTENERS_REQUEST:
             {
                 Notification notification = requested.decode_notifyListenersRequest();
                 auto label_rule = notification.first;
@@ -168,13 +168,13 @@ void Http3ServerRoute::buildResponseChunks(HTTP3TreeMessage& requested) {
                 requested.encode_notifyListenersResponse(true);
             }
             break;
-        case payload_chunk_header::SIGNAL_WWATP_PROCESS_NOTIFICATION_REQUEST:
+        case payload_chunk_header::SIGNAL_WORLWIND_PROCESS_NOTIFICATION_REQUEST:
             {
                 backend_.processNotifications();
                 requested.encode_processNotificationResponse();
             }
             break;
-        case payload_chunk_header::SIGNAL_WWATP_GET_JOURNAL_REQUEST:
+        case payload_chunk_header::SIGNAL_WORLWIND_GET_JOURNAL_REQUEST:
             {
                 auto last_notification = requested.decode_getJournalRequest();
                 auto last_notification_index = last_notification.first;
@@ -217,23 +217,23 @@ void Http3ServerRoute::buildResponseChunks(HTTP3TreeMessage& requested) {
     }
 }
 
-HTTP3TreeMessage Http3ServerRoute::intializeResponseMessage(const StreamIdentifier& stream_id, chunks& request) const {
+StreamTreeMessage StreamServerRoute::intializeResponseMessage(const StreamIdentifier& stream_id, chunks& request) const {
     if (stream_id.logical_id != request.front().get_request_id()) {
         throw std::invalid_argument("Stream logical ID does not match request ID");
     }
-    return HTTP3TreeMessage(stream_id.logical_id, request.front().get_signal_signal());
+    return StreamTreeMessage(stream_id.logical_id, request.front().get_signal_signal());
 }
 
 
-bool HTTP3Server::isChunkStream(std::string const& url) const {
-    // Return true if and only if "wwatp/" appears in the URL
-    if (url.find("wwatp/") != std::string::npos) {
+bool StreamServer::isChunkStream(std::string const& url) const {
+    // Return true if and only if "worlwind/" appears in the URL
+    if (url.find("worlwind/") != std::string::npos) {
         return true;
     }
     return false;
 }
 
-chunks HTTP3Server::staticAsset(std::string const& url) const {
+chunks StreamServer::staticAsset(std::string const& url) const {
     auto it = staticAssets_.find(url);
     if (it != staticAssets_.end()) {
         return it->second;
@@ -242,12 +242,12 @@ chunks HTTP3Server::staticAsset(std::string const& url) const {
     return chunks();
 }
 
-prepared_stream_callback HTTP3Server::getResponseCallback(const Request & req) {
-    if (req.isWWATP()) {
+prepared_stream_callback StreamServer::getResponseCallback(const Request & req) {
+    if (req.isWorlWIND()) {
         // This is a chunk stream, so we need set up the response for the right backend
         auto it = servers_.find(req.path);
         if (it != servers_.end()) {
-            Http3ServerRoute& route = it->second;
+            StreamServerRoute& route = it->second;
             stream_callback_fn callback = [&route](const StreamIdentifier& stream_id, chunks& request) {
                 return route.processResponseStream(stream_id, request);
             };

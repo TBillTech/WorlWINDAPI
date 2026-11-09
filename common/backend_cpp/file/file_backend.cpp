@@ -59,7 +59,7 @@ std::string getNodeName(const std::string& base_path, const std::string& label_r
 std::string getNodeParentPath(const std::string& base_path, const std::string& label_rule)
 {
     // The parent path is the same as the getNodeDirectoryPath, but dropping the last part of the path.
-    // For example, the parent path of base_path = /mnt/d/code/wwatp/ and label_rule = "Zoo/Lion" is /mnt/d/code/wwatp/Zoo/.
+    // For example, the parent path of base_path = /mnt/d/code/worlwind/ and label_rule = "Zoo/Lion" is /mnt/d/code/worlwind/Zoo/.
     auto node_dir = getNodeDirectoryPath(base_path, label_rule);
     if (node_dir == base_path) {
         // If the node directory is the same as the base path, return the base path.

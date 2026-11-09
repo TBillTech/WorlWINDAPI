@@ -22,7 +22,7 @@ TEST_CASE("NullDirectoryWatcher contract", "[DirectoryWatcher]") {
 #ifndef _WIN32
 #include "inotify_directory_watcher.h"
 TEST_CASE("InotifyDirectoryWatcher real filesystem", "[DirectoryWatcher][inotify]") {
-    auto dir = std::filesystem::temp_directory_path() / "wwatp_inotify_watcher_test";
+    auto dir = std::filesystem::temp_directory_path() / "worlwind_inotify_watcher_test";
     std::filesystem::remove_all(dir);
     std::filesystem::create_directories(dir);
     string dir_path = dir.string() + "/";
@@ -72,7 +72,7 @@ bool pollUntil(DirectoryWatcher& watcher, vector<WatchEvent>& all,
 }
 
 TEST_CASE("WindowsDirectoryWatcher real filesystem", "[DirectoryWatcher][windows]") {
-    auto dir = std::filesystem::temp_directory_path() / "wwatp_windows_watcher_test";
+    auto dir = std::filesystem::temp_directory_path() / "worlwind_windows_watcher_test";
     std::filesystem::remove_all(dir);
     std::filesystem::create_directories(dir);
     string dir_path = dir.string() + "/";
@@ -149,7 +149,7 @@ TEST_CASE("WindowsDirectoryWatcher real filesystem", "[DirectoryWatcher][windows
 #endif
 
 TEST_CASE("FileBackend with FakeDirectoryWatcher", "[FileBackend][DirectoryWatcher]") {
-    auto dir = std::filesystem::temp_directory_path() / "wwatp_fake_watcher_test";
+    auto dir = std::filesystem::temp_directory_path() / "worlwind_fake_watcher_test";
     std::filesystem::remove_all(dir);
     std::filesystem::create_directories(dir);
     string base_path = dir.string();
@@ -208,7 +208,7 @@ TEST_CASE("FileBackend with FakeDirectoryWatcher", "[FileBackend][DirectoryWatch
 }
 
 TEST_CASE("FileBackend watch failure is reported by the watcher", "[FileBackend][DirectoryWatcher]") {
-    auto dir = std::filesystem::temp_directory_path() / "wwatp_fake_watcher_fail_test";
+    auto dir = std::filesystem::temp_directory_path() / "worlwind_fake_watcher_fail_test";
     std::filesystem::remove_all(dir);
     std::filesystem::create_directories(dir);
     auto state = make_shared<FakeDirectoryWatcher::State>();

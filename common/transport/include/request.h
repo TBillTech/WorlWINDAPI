@@ -56,7 +56,7 @@ struct Request {
         os << "Request: scheme=" << req.scheme << ", authority=" << req.authority << ", path=" << req.path << ", method=" << req.method<< ", urgency=" << req.pri.urgency << ", inc=" << req.pri.inc;
         return os;
     }
-    bool isWWATP() const {
-        return path.find("wwatp/") != std::string::npos;
+    bool isWorlWIND() const {
+        return path.find("worlwind/") != std::string::npos;
     }
 };

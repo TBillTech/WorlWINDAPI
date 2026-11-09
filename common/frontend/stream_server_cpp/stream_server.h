@@ -5,32 +5,32 @@
 #include "frontend_base.h"
 #include "communication.h"
 
-// This HTTP3Server class does not need to perform authentication or authorization, because that job will be handled by the
-// HTTP3Authenticator service, which stands between clients and these HTTP3Server instances.  The job of the HTTP3Authenticator
+// This StreamServer class does not need to perform authentication or authorization, because that job will be handled by the
+// StreamAuthenticator service, which stands between clients and these StreamServer instances.  The job of the StreamAuthenticator
 // is to block scid creation by unauthorized clients, and to filter static asset request, various tree reads, 
 // various tree writes (separate level of authority), and to filter the returning journal notifications.
 // This does imply one thing about journal notifications: the response can contain just the sequence number,
 // hiding the notification itself, but keeping the client up-to-date without revealing secrets.
 
-// The HTTP3ServerRoute class is a utility class which operates inside the Server Handler callback in the QuicListener.
+// The StreamServerRoute class is a utility class which operates inside the Server Handler callback in the QuicListener.
 // It can also provides static "assets" for urls which do not require the callback listener.
 // If an url is NOT a chunk stream, then the assumption is that the url is a static asset and can be immediately served.
 // On the other hand, the journaling and backend api support will be chunk stream mode.
-// In fact, by default, the distinction for is_chunk_stream just checks if the url contains the path /wwatp 
-// WWATP tree protocol then functions beyond the /wwatp path point, and multiple different sets of journals can 
-// function independently of each other.  The HTTP3ServerRoute class is thus more of a path resource provider than a standalone 
-// server executable process.  (In contrast, the HTTP3Server is close to the core of an executable process.)
-class Http3ServerRoute {
+// In fact, by default, the distinction for is_chunk_stream just checks if the url contains the path /worlwind 
+// WorlWIND tree protocol then functions beyond the /worlwind path point, and multiple different sets of journals can 
+// function independently of each other.  The StreamServerRoute class is thus more of a path resource provider than a standalone 
+// server executable process.  (In contrast, the StreamServer is close to the core of an executable process.)
+class StreamServerRoute {
 public:
-    Http3ServerRoute(Backend& backend, size_t max_journal_size, 
+    StreamServerRoute(Backend& backend, size_t max_journal_size, 
                      std::string const& url, std::string const& mutable_page_label_rule) 
         : backend_(backend), lastNotificationIndex_(0), maxJournalSize_(max_journal_size),
           url_(url), mutablePageLabelRule_(mutable_page_label_rule) {
             journal_.push_back({0, {"", fplus::nothing<TreeNode>()}});
           };
-    ~Http3ServerRoute() = default;
+    ~StreamServerRoute() = default;
 
-    Http3ServerRoute(const Http3ServerRoute&& other) :
+    StreamServerRoute(const StreamServerRoute&& other) :
         backend_(other.backend_), lastNotificationIndex_(other.lastNotificationIndex_),
         journal_(std::move(other.journal_)), maxJournalSize_(other.maxJournalSize_),
         url_(std::move(other.url_)), mutablePageLabelRule_(std::move(other.mutablePageLabelRule_)) {
@@ -54,15 +54,15 @@ public:
     //   tried to make, but the server rejected.  The unsolicited notifications will be undoing the attempted changes.
     chunks processResponseStream(const StreamIdentifier& stream_id, chunks& request);
 
-    void buildResponseChunks(HTTP3TreeMessage& requested);
+    void buildResponseChunks(StreamTreeMessage& requested);
 
-    HTTP3TreeMessage intializeResponseMessage(const StreamIdentifier& stream_id, chunks& request) const;
+    StreamTreeMessage intializeResponseMessage(const StreamIdentifier& stream_id, chunks& request) const;
 
     Backend& getBackend() const { return backend_; }
 
 private:
     Backend& backend_;
-    std::map<StreamIdentifier, HTTP3TreeMessage> ongoingResponses_;
+    std::map<StreamIdentifier, StreamTreeMessage> ongoingResponses_;
     // Journal is an ordered list of notifications. 
     // The concept here is that if the server cannot provde the all the notifications back to the client,
     // then the client will have to "start over" and request the mutable part of the tree again.
@@ -75,16 +75,16 @@ private:
     std::string mutablePageLabelRule_;
 };
 
-class HTTP3Server : public Frontend {
+class StreamServer : public Frontend {
 public:
-    HTTP3Server(const std::string& name) : name_(name) { };
-    HTTP3Server(const std::string& name, std::map<std::string, chunks>&& staticAssets) 
+    StreamServer(const std::string& name) : name_(name) { };
+    StreamServer(const std::string& name, std::map<std::string, chunks>&& staticAssets) 
         : name_(name), staticAssets_(std::move(staticAssets)) { };
-    ~HTTP3Server() = default;
+    ~StreamServer() = default;
 
     // Frontend interface implementation
     std::string getName() const override { return name_; }
-    std::string getType() const override { return "http3_server"; }
+    std::string getType() const override { return "stream_server"; }
     
     void stop() override {
         stopFlag.store(true);
@@ -105,8 +105,8 @@ public:
         return backends;
     }
 
-    Http3ServerRoute& addBackendRoute(Backend& backend, size_t journal_size, std::string const& url) {
-        auto emplaced = servers_.emplace(url, Http3ServerRoute(backend, journal_size, url, "MutableNodes"));
+    StreamServerRoute& addBackendRoute(Backend& backend, size_t journal_size, std::string const& url) {
+        auto emplaced = servers_.emplace(url, StreamServerRoute(backend, journal_size, url, "MutableNodes"));
         return emplaced.first->second;
     }
 
@@ -144,7 +144,7 @@ public:
 
 private:
     std::string name_;
-    std::map<std::string, Http3ServerRoute> servers_;
+    std::map<std::string, StreamServerRoute> servers_;
     std::map<std::string, chunks> staticAssets_;
     std::map<StreamIdentifier, std::string> requestRoutes_;
 

@@ -1,6 +1,6 @@
-# WWATP - Copilot Instructions
+# WORLWIND - Copilot Instructions
 
-WWATP is a C++20 agent communication layer built on QUIC and HTTP/3. It provides a
+WORLWIND is a C++20 agent communication layer built on QUIC and HTTP/3. It provides a
 tree-based data model, composable backends and frontends, C++ and JavaScript client
 libraries, and server/test programs.
 

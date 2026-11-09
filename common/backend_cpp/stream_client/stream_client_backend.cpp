@@ -4,14 +4,14 @@
 
 using namespace std;
 
-void Http3ClientBackend::awaitResponse()
+void StreamClientBackend::awaitResponse()
 {
     std::unique_lock<std::mutex> lock(blockingMutex_);
     responseReady = false; // Reset before waiting for the next response
     responseCondition.wait(lock, [&]{ return responseReady; }); // blocks until ready is true
 }
 
-bool Http3ClientBackend::awaitBoolResponse()
+bool StreamClientBackend::awaitBoolResponse()
 {
     awaitResponse();
     std::lock_guard<std::mutex> lock(handlerMutex_);
@@ -20,7 +20,7 @@ bool Http3ClientBackend::awaitBoolResponse()
     return result;
 }
 
-fplus::maybe<TreeNode> Http3ClientBackend::awaitTreeResponse()
+fplus::maybe<TreeNode> StreamClientBackend::awaitTreeResponse()
 {
     awaitResponse();
     std::lock_guard<std::mutex> lock(handlerMutex_);
@@ -29,7 +29,7 @@ fplus::maybe<TreeNode> Http3ClientBackend::awaitTreeResponse()
     return result;
 }
 
-std::vector<TreeNode> Http3ClientBackend::awaitVectorTreeResponse()
+std::vector<TreeNode> StreamClientBackend::awaitVectorTreeResponse()
 {
     awaitResponse();
     std::lock_guard<std::mutex> lock(handlerMutex_);
@@ -38,7 +38,7 @@ std::vector<TreeNode> Http3ClientBackend::awaitVectorTreeResponse()
     return result;
 }
 
-chunks Http3ClientBackend::awaitChunksResponse()
+chunks StreamClientBackend::awaitChunksResponse()
 {
     awaitResponse();
     std::lock_guard<std::mutex> lock(handlerMutex_);
@@ -47,14 +47,14 @@ chunks Http3ClientBackend::awaitChunksResponse()
     return result;
 }
 
-void Http3ClientBackend::responseSignal()
+void StreamClientBackend::responseSignal()
 {
     std::lock_guard<std::mutex> lock(blockingMutex_);
     responseReady = true;
     responseCondition.notify_one();
 }
 
-fplus::maybe<TreeNode>& Http3ClientBackend::getStaticNode() {
+fplus::maybe<TreeNode>& StreamClientBackend::getStaticNode() {
     // If the static node is not set, then we need to request it from the server.
     if (blockingMode_) {
         requestStaticNodeData();
@@ -62,13 +62,13 @@ fplus::maybe<TreeNode>& Http3ClientBackend::getStaticNode() {
     return staticNode_;
 }
 
-fplus::maybe<TreeNode> Http3ClientBackend::getNode(const std::string& label_rule) const {
+fplus::maybe<TreeNode> StreamClientBackend::getNode(const std::string& label_rule) const {
     // Use the caching localBackend_ to get the node
     std::lock_guard<std::mutex> lock(backendMutex_);
     return localBackend_.getNode(label_rule);
 }
 
-bool Http3ClientBackend::upsertNode(const std::vector<TreeNode>& nodes) {
+bool StreamClientBackend::upsertNode(const std::vector<TreeNode>& nodes) {
     // Use the caching localBackend_ to upsert the node
     bool result(false);
     {
@@ -82,7 +82,7 @@ bool Http3ClientBackend::upsertNode(const std::vector<TreeNode>& nodes) {
         {
             return result;
         }
-        HTTP3TreeMessage request(0);
+        StreamTreeMessage request(0);
         request.encode_upsertNodeRequest(nodes);
         pendingRequests_.push_back(std::move(request));
     }
@@ -92,7 +92,7 @@ bool Http3ClientBackend::upsertNode(const std::vector<TreeNode>& nodes) {
     return awaitBoolResponse();
 }
 
-bool Http3ClientBackend::deleteNode(const std::string& label_rule) {
+bool StreamClientBackend::deleteNode(const std::string& label_rule) {
     // Use the caching localBackend_ to delete the node
     bool result(false);
     {
@@ -106,7 +106,7 @@ bool Http3ClientBackend::deleteNode(const std::string& label_rule) {
         {
             return result;
         }
-        HTTP3TreeMessage request(0);
+        StreamTreeMessage request(0);
         request.encode_deleteNodeRequest(label_rule);
         pendingRequests_.push_back(std::move(request));
     }
@@ -116,31 +116,31 @@ bool Http3ClientBackend::deleteNode(const std::string& label_rule) {
     return awaitBoolResponse();
 }
 
-std::vector<TreeNode> Http3ClientBackend::getPageTree(const std::string& page_node_label_rule) const {
+std::vector<TreeNode> StreamClientBackend::getPageTree(const std::string& page_node_label_rule) const {
     // Use the caching localBackend_ to get the page tree
     std::lock_guard<std::mutex> lock(backendMutex_);
     return localBackend_.getPageTree(page_node_label_rule);
 }
 
-std::vector<TreeNode> Http3ClientBackend::relativeGetPageTree(const TreeNode& node, const std::string& page_node_label_rule) const {
+std::vector<TreeNode> StreamClientBackend::relativeGetPageTree(const TreeNode& node, const std::string& page_node_label_rule) const {
     // create the relative_page_label_rule
     std::string relative_page_label_rule = node.getLabelRule() + "/" + page_node_label_rule;
     return getPageTree(relative_page_label_rule);
 }
 
-std::vector<TreeNode> Http3ClientBackend::queryNodes(const std::string& label_rule) const {
+std::vector<TreeNode> StreamClientBackend::queryNodes(const std::string& label_rule) const {
     // Use the caching localBackend_ to query the nodes
     std::lock_guard<std::mutex> lock(backendMutex_);
     return localBackend_.queryNodes(label_rule);
 }
 
-std::vector<TreeNode> Http3ClientBackend::relativeQueryNodes(const TreeNode& node, const std::string& label_rule) const {
+std::vector<TreeNode> StreamClientBackend::relativeQueryNodes(const TreeNode& node, const std::string& label_rule) const {
     // create the relative_label_rule
     std::string relative_label_rule = node.getLabelRule() + "/" + label_rule;
     return queryNodes(relative_label_rule);
 }
 
-bool Http3ClientBackend::openTransactionLayer(const TreeNode& node) {
+bool StreamClientBackend::openTransactionLayer(const TreeNode& node) {
     // Use the caching localBackend_ to open the transaction layer
     bool result(false);
     {
@@ -157,7 +157,7 @@ bool Http3ClientBackend::openTransactionLayer(const TreeNode& node) {
         {
             return result;
         }
-        HTTP3TreeMessage request(0);
+        StreamTreeMessage request(0);
         request.encode_openTransactionLayerRequest(node);
         pendingRequests_.push_back(std::move(request));
     }
@@ -172,7 +172,7 @@ bool Http3ClientBackend::openTransactionLayer(const TreeNode& node) {
     return result;
 }
 
-bool Http3ClientBackend::closeTransactionLayers(void) {
+bool StreamClientBackend::closeTransactionLayers(void) {
     // Use the caching localBackend_ to close the transaction layers
     bool result(false);
     {
@@ -186,7 +186,7 @@ bool Http3ClientBackend::closeTransactionLayers(void) {
         {
             return result;
         }
-        HTTP3TreeMessage request(0);
+        StreamTreeMessage request(0);
         request.encode_closeTransactionLayersRequest();
         pendingRequests_.push_back(std::move(request));
     }
@@ -196,13 +196,13 @@ bool Http3ClientBackend::closeTransactionLayers(void) {
     return awaitBoolResponse();
 }
 
-bool Http3ClientBackend::applyTransaction(const Transaction& transaction) {
+bool StreamClientBackend::applyTransaction(const Transaction& transaction) {
     // ApplyTransaction _surely_ needs to send to the server.
     {
         std::lock_guard<std::mutex> lock(handlerMutex_);
         if (serverSyncOn_)
         {
-            HTTP3TreeMessage request(0);
+            StreamTreeMessage request(0);
             request.encode_applyTransactionRequest(transaction);
             pendingRequests_.push_back(std::move(request));
         }
@@ -218,14 +218,14 @@ bool Http3ClientBackend::applyTransaction(const Transaction& transaction) {
     return false;
 }
 
-std::vector<TreeNode> Http3ClientBackend::getFullTree() const {
+std::vector<TreeNode> StreamClientBackend::getFullTree() const {
     // Use the caching localBackend_ to get the full tree
     std::lock_guard<std::mutex> lock(backendMutex_);
     return localBackend_.getFullTree();
 }
 
-void Http3ClientBackend::registerNodeListener(const std::string listener_name, const std::string label_rule, bool child_notify, NodeListenerCallback callback) {
-    // Since the user of the http3 client backend is asking to listen for changes, 
+void StreamClientBackend::registerNodeListener(const std::string listener_name, const std::string label_rule, bool child_notify, NodeListenerCallback callback) {
+    // Since the user of the stream client backend is asking to listen for changes, 
     // in fact, the listeners need to be registered both with the local backend and the server.
     // In cases where the local backend sees a change, then the server will eventually duplicate the notification.
     // Therefore, we need to track local notifications and deduplicate them versus server notifications.
@@ -240,7 +240,7 @@ void Http3ClientBackend::registerNodeListener(const std::string listener_name, c
         std::lock_guard<std::mutex> lock(handlerMutex_);
         if (serverSyncOn_)
         {
-            HTTP3TreeMessage request(0);
+            StreamTreeMessage request(0);
             request.encode_registerNodeListenerRequest(listener_name, label_rule, child_notify);
             pendingRequests_.push_back(std::move(request));
         }
@@ -248,21 +248,21 @@ void Http3ClientBackend::registerNodeListener(const std::string listener_name, c
     // But registerNodeListner is not the kind of method that blocks, so done here.
 }
 
-void Http3ClientBackend::deregisterNodeListener(const std::string listener_name, const std::string label_rule) {
+void StreamClientBackend::deregisterNodeListener(const std::string listener_name, const std::string label_rule) {
     std::lock_guard<std::mutex> lock(backendMutex_);
     localBackend_.deregisterNodeListener(listener_name, label_rule);
     // Deregister the listener with the server
     {
         std::lock_guard<std::mutex> lock(handlerMutex_);
         if (serverSyncOn_) {
-            HTTP3TreeMessage request(0);
+            StreamTreeMessage request(0);
             request.encode_deregisterNodeListenerRequest(listener_name, label_rule);
             pendingRequests_.push_back(std::move(request));
         }
     }
 }
 
-void Http3ClientBackend::notifyListeners(const std::string& label_rule, const fplus::maybe<TreeNode>& node) {
+void StreamClientBackend::notifyListeners(const std::string& label_rule, const fplus::maybe<TreeNode>& node) {
     // Notify the local backend
     std::lock_guard<std::mutex> lock(backendMutex_);
     localBackend_.notifyListeners(label_rule, node);
@@ -270,14 +270,14 @@ void Http3ClientBackend::notifyListeners(const std::string& label_rule, const fp
     {
         std::lock_guard<std::mutex> lock(handlerMutex_);
         if (serverSyncOn_) {
-            HTTP3TreeMessage request(0);
+            StreamTreeMessage request(0);
             request.encode_notifyListenersRequest(label_rule, node);
             pendingRequests_.push_back(std::move(request));
         }
     }
 }
 
-void Http3ClientBackend::processNotifications() {
+void StreamClientBackend::processNotifications() {
     // This blocks until a journal request and response has occurred.
     // Since this is the ONLY use of notificationBlock_, it doesn't hurt to store true
     // even when not in blocking mode.
@@ -294,7 +294,7 @@ void Http3ClientBackend::processNotifications() {
         {
             return;
         }
-        HTTP3TreeMessage request(0);
+        StreamTreeMessage request(0);
         request.encode_processNotificationRequest();
         pendingRequests_.push_back(std::move(request));
     }
@@ -324,7 +324,7 @@ void Http3ClientBackend::processNotifications() {
     waitForNotification(notificationBlock_);
 }
 
-void Http3ClientBackend::processHTTP3Response(HTTP3TreeMessage& response) {
+void StreamClientBackend::processStreamResponse(StreamTreeMessage& response) {
     // Process the response based on the signal
     switch (response.getSignal()) {
         case payload_chunk_header::SIGNAL_OTHER_CHUNK: {
@@ -345,7 +345,7 @@ void Http3ClientBackend::processHTTP3Response(HTTP3TreeMessage& response) {
                 }
             }
             break;
-        case payload_chunk_header::SIGNAL_WWATP_GET_NODE_RESPONSE: {
+        case payload_chunk_header::SIGNAL_WORLWIND_GET_NODE_RESPONSE: {
                 fplus::maybe<TreeNode> node = response.decode_getNodeResponse();
                 {
                     std::lock_guard<std::mutex> lock(handlerMutex_);
@@ -364,7 +364,7 @@ void Http3ClientBackend::processHTTP3Response(HTTP3TreeMessage& response) {
                 }
             }
             break;
-        case payload_chunk_header::SIGNAL_WWATP_UPSERT_NODE_RESPONSE: {
+        case payload_chunk_header::SIGNAL_WORLWIND_UPSERT_NODE_RESPONSE: {
                 bool success = response.decode_upsertNodeResponse();
                 {
                     std::lock_guard<std::mutex> lock(handlerMutex_);
@@ -375,7 +375,7 @@ void Http3ClientBackend::processHTTP3Response(HTTP3TreeMessage& response) {
                 }
             }
             break;
-        case payload_chunk_header::SIGNAL_WWATP_DELETE_NODE_RESPONSE: {
+        case payload_chunk_header::SIGNAL_WORLWIND_DELETE_NODE_RESPONSE: {
                 bool success = response.decode_deleteNodeResponse();
                 {
                     std::lock_guard<std::mutex> lock(handlerMutex_);
@@ -386,7 +386,7 @@ void Http3ClientBackend::processHTTP3Response(HTTP3TreeMessage& response) {
                 } 
             }
             break;
-        case payload_chunk_header::SIGNAL_WWATP_GET_PAGE_TREE_RESPONSE: {
+        case payload_chunk_header::SIGNAL_WORLWIND_GET_PAGE_TREE_RESPONSE: {
                 std::vector<TreeNode> nodes = response.decode_getPageTreeResponse();
                 // Alternatively, if the request was actually a sync-up from the Journal Request, 
                 // then this should never do the response signal, but _should_ clear the notification block.
@@ -410,7 +410,7 @@ void Http3ClientBackend::processHTTP3Response(HTTP3TreeMessage& response) {
                 }
             }
             break;
-        case payload_chunk_header::SIGNAL_WWATP_QUERY_NODES_RESPONSE: {
+        case payload_chunk_header::SIGNAL_WORLWIND_QUERY_NODES_RESPONSE: {
                 std::vector<TreeNode> nodes = response.decode_getQueryNodesResponse();
                 {
                     std::lock_guard<std::mutex> lock(handlerMutex_);
@@ -425,7 +425,7 @@ void Http3ClientBackend::processHTTP3Response(HTTP3TreeMessage& response) {
                 }
             }
             break;
-        case payload_chunk_header::SIGNAL_WWATP_OPEN_TRANSACTION_LAYER_RESPONSE: {
+        case payload_chunk_header::SIGNAL_WORLWIND_OPEN_TRANSACTION_LAYER_RESPONSE: {
                 bool success = response.decode_openTransactionLayerResponse();
                 {
                     std::lock_guard<std::mutex> lock(handlerMutex_);
@@ -436,7 +436,7 @@ void Http3ClientBackend::processHTTP3Response(HTTP3TreeMessage& response) {
                 }
             }
             break;
-        case payload_chunk_header::SIGNAL_WWATP_CLOSE_TRANSACTION_LAYERS_RESPONSE: {
+        case payload_chunk_header::SIGNAL_WORLWIND_CLOSE_TRANSACTION_LAYERS_RESPONSE: {
                 bool success = response.decode_closeTransactionLayersResponse();
                 {
                     std::lock_guard<std::mutex> lock(handlerMutex_);
@@ -447,7 +447,7 @@ void Http3ClientBackend::processHTTP3Response(HTTP3TreeMessage& response) {
                 }
             }
             break;
-        case payload_chunk_header::SIGNAL_WWATP_APPLY_TRANSACTION_RESPONSE: {
+        case payload_chunk_header::SIGNAL_WORLWIND_APPLY_TRANSACTION_RESPONSE: {
                 bool success = response.decode_applyTransactionResponse();
                 {
                     std::lock_guard<std::mutex> lock(handlerMutex_);
@@ -458,7 +458,7 @@ void Http3ClientBackend::processHTTP3Response(HTTP3TreeMessage& response) {
                 }
             }
             break;
-        case payload_chunk_header::SIGNAL_WWATP_GET_FULL_TREE_RESPONSE: {
+        case payload_chunk_header::SIGNAL_WORLWIND_GET_FULL_TREE_RESPONSE: {
                 std::vector<TreeNode> nodes = response.decode_getFullTreeResponse();
                 {
                     std::lock_guard<std::mutex> lock(handlerMutex_);
@@ -474,7 +474,7 @@ void Http3ClientBackend::processHTTP3Response(HTTP3TreeMessage& response) {
                 }
             }
             break;
-        case payload_chunk_header::SIGNAL_WWATP_REGISTER_LISTENER_RESPONSE: {
+        case payload_chunk_header::SIGNAL_WORLWIND_REGISTER_LISTENER_RESPONSE: {
                 bool result = response.decode_registerNodeListenerResponse();
                 {
                     std::lock_guard<std::mutex> lock(handlerMutex_);
@@ -485,7 +485,7 @@ void Http3ClientBackend::processHTTP3Response(HTTP3TreeMessage& response) {
                 }
             }
             break;
-        case payload_chunk_header::SIGNAL_WWATP_DEREGISTER_LISTENER_RESPONSE: {
+        case payload_chunk_header::SIGNAL_WORLWIND_DEREGISTER_LISTENER_RESPONSE: {
                 bool result = response.decode_deregisterNodeListenerResponse();
                 {
                     std::lock_guard<std::mutex> lock(handlerMutex_);
@@ -496,7 +496,7 @@ void Http3ClientBackend::processHTTP3Response(HTTP3TreeMessage& response) {
                 }
             }
             break;
-        case payload_chunk_header::SIGNAL_WWATP_NOTIFY_LISTENERS_RESPONSE: {
+        case payload_chunk_header::SIGNAL_WORLWIND_NOTIFY_LISTENERS_RESPONSE: {
                 bool result = response.decode_notifyListenersResponse();
                 {
                     std::lock_guard<std::mutex> lock(handlerMutex_);
@@ -507,14 +507,14 @@ void Http3ClientBackend::processHTTP3Response(HTTP3TreeMessage& response) {
                 }
             }
             break;
-        case payload_chunk_header::SIGNAL_WWATP_PROCESS_NOTIFICATION_RESPONSE: {
+        case payload_chunk_header::SIGNAL_WORLWIND_PROCESS_NOTIFICATION_RESPONSE: {
                 response.decode_processNotificationResponse();
                 if (blockingMode_) {
                     responseSignal();
                 }
             }
             break;
-        case payload_chunk_header::SIGNAL_WWATP_GET_JOURNAL_RESPONSE: {
+        case payload_chunk_header::SIGNAL_WORLWIND_GET_JOURNAL_RESPONSE: {
                 std::vector<SequentialNotification> notifications = response.decode_getJournalResponse();
                 // loop backwards through the notifications for the last solicited notification
                 // (unsolicited notifications are (uint64_t)-1, indicating usually reverted/rejected changes)
@@ -559,31 +559,31 @@ void Http3ClientBackend::processHTTP3Response(HTTP3TreeMessage& response) {
         }
 }
 
-HTTP3TreeMessage Http3ClientBackend::popNextRequest() {
+StreamTreeMessage StreamClientBackend::popNextRequest() {
     std::lock_guard<std::mutex> lock(handlerMutex_);
     if (pendingRequests_.empty()) {
         throw std::runtime_error("No pending requests");
     }
-    HTTP3TreeMessage request(std::move(pendingRequests_.front()));
+    StreamTreeMessage request(std::move(pendingRequests_.front()));
     pendingRequests_.pop_front();
     return request;
 }
 
-HTTP3TreeMessage Http3ClientBackend::solicitJournalRequest() const {
-    HTTP3TreeMessage request(0);
+StreamTreeMessage StreamClientBackend::solicitJournalRequest() const {
+    StreamTreeMessage request(0);
     std::lock_guard<std::mutex> lock(handlerMutex_);
     request.encode_getJournalRequest(lastNotification_);
     return request;
 }
 
-void Http3ClientBackend::requestFullTreeSync() {
+void StreamClientBackend::requestFullTreeSync() {
     if (staticNode_.is_just()) {
         requestStaticNodeData();
         return;
     }
     // requestFullTreeSync explicitly from the server.
     {
-        HTTP3TreeMessage request(0);
+        StreamTreeMessage request(0);
         request.encode_getFullTreeRequest();
         std::lock_guard<std::mutex> lock(handlerMutex_);
         pendingRequests_.push_back(std::move(request));
@@ -600,10 +600,10 @@ void Http3ClientBackend::requestFullTreeSync() {
     std::lock_guard<std::mutex> lock(backendMutex_);
 }
 
-void Http3ClientBackend::requestStaticNodeData() {
+void StreamClientBackend::requestStaticNodeData() {
     // requestStaticNodeData explicitly from the server.
     {
-        HTTP3TreeMessage request(0);
+        StreamTreeMessage request(0);
         request.setup_staticNodeDataRequest();
         std::lock_guard<std::mutex> lock(handlerMutex_);
         pendingRequests_.push_back(std::move(request));
@@ -619,7 +619,7 @@ void Http3ClientBackend::requestStaticNodeData() {
     enableServerSync();
 }
 
-void Http3ClientBackend::setNodeChunks(chunks& chunks) {
+void StreamClientBackend::setNodeChunks(chunks& chunks) {
     std::lock_guard<std::mutex> lock(backendMutex_);
     if (staticNode_.is_just()) {
         shared_span<> concatted(chunks.begin(), chunks.end());
@@ -630,16 +630,16 @@ void Http3ClientBackend::setNodeChunks(chunks& chunks) {
     }
 }
 
-void Http3ClientBackend::setMutablePageTreeLabelRule(std::string label_rule) {
+void StreamClientBackend::setMutablePageTreeLabelRule(std::string label_rule) {
     std::lock_guard<std::mutex> lock(handlerMutex_);
     mutablePageTreeLabelRule_ = label_rule;
 }
 
-void Http3ClientBackend::getMutablePageTree() {
+void StreamClientBackend::getMutablePageTree() {
     getMutablePageTreeInMode(blockingMode_, false);
 }
 
-void Http3ClientBackend::getMutablePageTreeInMode(bool blocking_mode, bool isJournalRequest) {
+void StreamClientBackend::getMutablePageTreeInMode(bool blocking_mode, bool isJournalRequest) {
     // Use the caching localBackend_ to get the mutable page tree
     string label_rule = "MutableNodes";
     {
@@ -647,7 +647,7 @@ void Http3ClientBackend::getMutablePageTreeInMode(bool blocking_mode, bool isJou
         auto label_rule = mutablePageTreeLabelRule_;
     }
     {
-        HTTP3TreeMessage request(0);
+        StreamTreeMessage request(0);
         request.encode_getPageTreeRequest(label_rule);
         request.setIsJournalRequest(isJournalRequest);
         std::lock_guard<std::mutex> lock(handlerMutex_);
@@ -665,7 +665,7 @@ void Http3ClientBackend::getMutablePageTreeInMode(bool blocking_mode, bool isJou
     needMutablePageTreeSync_ = false;
 }
 
-void Http3ClientBackend::processOneNotification(SequentialNotification const& notification) {
+void StreamClientBackend::processOneNotification(SequentialNotification const& notification) {
     //uint64_t sequence_num = notification.first;
     Notification const& notification_data = notification.second;
     std::string label_rule = notification_data.first;
@@ -685,7 +685,7 @@ void Http3ClientBackend::processOneNotification(SequentialNotification const& no
     }
 }
 
-void Http3ClientBackend::updateLastNotification(SequentialNotification const& notification) {
+void StreamClientBackend::updateLastNotification(SequentialNotification const& notification) {
     if (notification.first == (uint64_t)-1) {
         return; // Unsolicited notifications cannot be used for tracking purposes.
     }
@@ -694,12 +694,12 @@ void Http3ClientBackend::updateLastNotification(SequentialNotification const& no
     lastNotification_ = notification;
 }
 
-Http3ClientBackend& Http3ClientBackendUpdater::addBackend(Backend& local_backend, bool blocking_mode, Request request,
+StreamClientBackend& StreamClientBackendUpdater::addBackend(Backend& local_backend, bool blocking_mode, Request request,
         size_t journal_requests_per_minute, fplus::maybe<TreeNode> static_node) {
     return backends_.emplace_back(local_backend, blocking_mode, request, journal_requests_per_minute, static_node);
 }
 
-Http3ClientBackend& Http3ClientBackendUpdater::getBackend(const std::string& url) {
+StreamClientBackend& StreamClientBackendUpdater::getBackend(const std::string& url) {
     for (auto& backend : backends_) {
         if (url.find(backend.getRequestUrlInfo().path) != std::string::npos) {
             return backend;
@@ -708,7 +708,7 @@ Http3ClientBackend& Http3ClientBackendUpdater::getBackend(const std::string& url
     throw std::runtime_error("Backend not found");
 }
 
-bool Http3ClientBackend::needToSendJournalRequest(double time) {
+bool StreamClientBackend::needToSendJournalRequest(double time) {
     if (journalRequestWaiting_.load()) {
         return false; // If we are already waiting for a journal request, then don't need to send one.
     }
@@ -725,18 +725,18 @@ bool Http3ClientBackend::needToSendJournalRequest(double time) {
     return needToSend;
 }
 
-void Http3ClientBackend::setJournalRequestComplete() {
+void StreamClientBackend::setJournalRequestComplete() {
     journalRequestWaiting_.store(false); // Reset the flag to indicate we are no longer waiting for a journal request.
 }
 
-void Http3ClientBackendUpdater::maintainRequestHandlers(Communication& connector, double time) {
+void StreamClientBackendUpdater::maintainRequestHandlers(Communication& connector, double time) {
     for (auto& backend : backends_) {
         if (backend.hasNextRequest()) {
             auto req = backend.getRequestUrlInfo();
             StreamIdentifier stream_id = connector.getNewRequestStreamIdentifier(req);
             auto theRequest = ongoingRequests_.emplace(stream_id, backend.popNextRequest());
             theRequest.first->second.setRequestId(stream_id.logical_id);
-            HTTP3TreeMessage& theMessage = theRequest.first->second;
+            StreamTreeMessage& theMessage = theRequest.first->second;
             stream_callback_fn messageHandler = [&backend, &theMessage, &connector](StreamIdentifier const& stream_identifier, chunks& response) {
                 chunks request;
                 auto requestChunk = theMessage.popRequestChunk();
@@ -748,14 +748,14 @@ void Http3ClientBackendUpdater::maintainRequestHandlers(Communication& connector
                 for (auto& chunk : response) {
                     theMessage.pushResponseChunk(chunk);
                 }
-                if (response.empty() && request.empty() && !theMessage.isResponseComplete() && backend.getRequestUrlInfo().isWWATP()) {
+                if (response.empty() && request.empty() && !theMessage.isResponseComplete() && backend.getRequestUrlInfo().isWorlWIND()) {
                     chunks response_chunks;
                     auto tag = payload_chunk_header(stream_identifier.logical_id, payload_chunk_header::SIGNAL_HEARTBEAT, 0);
                     response_chunks.emplace_back(tag, span<const char>("", 0));
                     return response_chunks;
                 }
                 if (theMessage.isResponseComplete()) {
-                    backend.processHTTP3Response(theMessage);
+                    backend.processStreamResponse(theMessage);
                 }
                 if (theMessage.isProcessingFinished()) {
                     // return signal_chunk_header::SIGNAL_CLOSE_STREAM
@@ -772,7 +772,7 @@ void Http3ClientBackendUpdater::maintainRequestHandlers(Communication& connector
             StreamIdentifier stream_id = connector.getNewRequestStreamIdentifier(req);
             auto theRequest = ongoingRequests_.emplace(stream_id, backend.solicitJournalRequest());
             theRequest.first->second.setRequestId(stream_id.logical_id);
-            HTTP3TreeMessage& theMessage = theRequest.first->second;
+            StreamTreeMessage& theMessage = theRequest.first->second;
             stream_callback_fn messageHandler = [&backend, &theMessage, &connector](StreamIdentifier const& stream_identifier, chunks& response) {
                 chunks request;
                 auto requestChunk = theMessage.popRequestChunk();
@@ -784,14 +784,14 @@ void Http3ClientBackendUpdater::maintainRequestHandlers(Communication& connector
                 for (auto& chunk : response) {
                     theMessage.pushResponseChunk(chunk);
                 }
-                if (response.empty() && request.empty() && !theMessage.isResponseComplete() && backend.getRequestUrlInfo().isWWATP()) {
+                if (response.empty() && request.empty() && !theMessage.isResponseComplete() && backend.getRequestUrlInfo().isWorlWIND()) {
                     chunks response_chunks;
                     auto tag = payload_chunk_header(stream_identifier.logical_id, payload_chunk_header::SIGNAL_HEARTBEAT, 0);
                     response_chunks.emplace_back(tag, span<const char>("", 0));
                     return response_chunks;
                 }
                 if (theMessage.isResponseComplete()) {
-                    backend.processHTTP3Response(theMessage);
+                    backend.processStreamResponse(theMessage);
                 }
                 if (theMessage.isProcessingFinished()) {
                     // return signal_chunk_header::SIGNAL_CLOSE_STREAM

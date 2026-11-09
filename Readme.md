@@ -29,7 +29,7 @@ From an **MSYS2 CLANG64** shell (or the `MSYS2 CLANG64` VS Code terminal profile
 cmake -S . -B build-clang64 -G "MinGW Makefiles" \
   -DCMAKE_C_COMPILER=/clang64/bin/clang \
   -DCMAKE_CXX_COMPILER=/clang64/bin/clang++ \
-  -DBUILD_WWATP_QUIC_C=OFF
+  -DBUILD_WORLWIND_QUIC_C=OFF
 cmake --build build-clang64 --parallel
 ctest --test-dir build-clang64 --output-on-failure
 ```
@@ -73,7 +73,7 @@ The tree protocol has a tree structure, with node branches having any number of 
 
 ## Lineage Representation
 
-A common idiom is to represent lineage by the concatenation of labels by inserting '/' characters, and prepending with `wwatp://<addr>:<port>/` or `udp://<addr>:<port>/`, where `<addr>` is an IP address and `<port>` is the port number. Notionally, there should NOT be more than one tree protocol at any addr+port destination, because that just means there should be two sub-trees connected at the root.
+A common idiom is to represent lineage by the concatenation of labels by inserting '/' characters, and prepending with `worlwind://<addr>:<port>/` or `udp://<addr>:<port>/`, where `<addr>` is an IP address and `<port>` is the port number. Notionally, there should NOT be more than one tree protocol at any addr+port destination, because that just means there should be two sub-trees connected at the root.
 
 ## UTF8 Encoded Type Names
 
@@ -159,12 +159,12 @@ Nominally, displayable Trees contain several important content values, which can
 For use case writing a book and writing a paper, we want the following features.  We want to be able to edit scenes and chapter context (or anything really) directly with a straight YAML representation of the tree.  We want the ability to edit equations in the web browser.  We want the web browser to be able to display charts.  We want to be able to export it all to a Static HTML for EPUB.  We want to be able to have an LLM convert the structured data to prose.  We want the LLM to convert the structured data to SSML. To acheive these goals, the following frontend and backends will be needed:
 * Threadsafe Backend at the DAG root, using Simple Backend with read and write.
 * Composite & Redirection Backends, for restricting the Static HTML Domain
-* HTTP3_Client Backend in cpp
-* HTTP3_Server Frontend, for supporting HTTP3_Client cpp, HTTP3_Client javascript, Flat HTML Mediator, Static HTML Watcher, Flat SSML Mediator, DOMLink Frontend
+* Stream_Client Backend in cpp
+* Stream_Server Frontend, for supporting Stream_Client cpp, HTTP3_Client javascript, Flat HTML Mediator, Static HTML Watcher, Flat SSML Mediator, DOMLink Frontend
 * HTTP3_Client Backend in javascript, which is the ONLY javascript backend 
 * Cloning Mediator Frontend + (if lazy flag, use earlier version notification in one tree to cause update)
 * File Backend, for supporting writing out YAML and HTML files, which is isomorphic to directories with a node.txt and contents 
-* YAML Mediator Frontend (WWATP Trees implicitly use MathJSON "representation", declarative Chart "representation")
+* YAML Mediator Frontend (WORLWIND Trees implicitly use MathJSON "representation", declarative Chart "representation")
 * Flat HTML Mediator Frontend, using MathLive for LaTeX front <-> MathJSON back, PlotLY for declarative PlotLy front <- declarative Chart back
 * Static HTML Watcher Frontend, using MathLive for HTML front <- LaTeX <- MathJSON back to LaTeX to HTML, PlotLY for PNG <- declarative PlotLy front <- declarative Chart back, and can use pandoc to convert to EPUB
 * Flat SSML Mediator Frontend, which simply converts DOM elements into SSML markdown

@@ -91,7 +91,6 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/common/frontend/stream_server_cpp
     ${PROJECT_SOURCE_DIR}/common/frontend/backend_tester_cpp
     ${PROJECT_SOURCE_DIR}/common/frontend/mediator_cpp
-    ${PROJECT_SOURCE_DIR}/common/frontend/wwatp_service_cpp
     ${PROJECT_SOURCE_DIR}/common/frontend
     ${PROJECT_SOURCE_DIR}/test_instances/catch2_unit_tests
 )

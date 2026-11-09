@@ -5,7 +5,7 @@ disable-model-invocation: true
 ---
 # Review PR
 
-You are acting as the WWATP Architect agent.
+You are acting as the WORLWIND Architect agent.
 
 Review the current changes/diff and produce a review that is optimized for the human → PR comment → Developer loop.
 

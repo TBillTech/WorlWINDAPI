@@ -72,13 +72,13 @@ void runContractTest(const string& protocol, int port) {
         server_handler_called = true;
         require(request.front().get_signal_type() == payload_chunk_header::GLOBAL_SIGNAL_TYPE,
                 "server callback lost the payload chunk header");
-        require(request.front().get_signal<payload_chunk_header>().signal == payload_chunk_header::SIGNAL_WWATP_REQUEST_CONTINUE,
+        require(request.front().get_signal<payload_chunk_header>().signal == payload_chunk_header::SIGNAL_WORLWIND_REQUEST_CONTINUE,
                 "server callback received the wrong payload signal");
         require(string(request.front().begin<const char>(), request.front().end<const char>()) == expected,
                 "server callback received corrupted binary payload");
         server_received = true;
         chunks response;
-        response.emplace_back(payload_chunk_header(sid.logical_id, payload_chunk_header::SIGNAL_WWATP_RESPONSE_CONTINUE, 0),
+        response.emplace_back(payload_chunk_header(sid.logical_id, payload_chunk_header::SIGNAL_WORLWIND_RESPONSE_CONTINUE, 0),
                               span<const char>("ack", 3));
         response.front().get_signal<payload_chunk_header>().data_length = 3;
         return response;
@@ -116,7 +116,7 @@ void runContractTest(const string& protocol, int port) {
         }
         require(response.front().get_signal_type() == payload_chunk_header::GLOBAL_SIGNAL_TYPE,
                 "client callback lost the response payload header");
-        require(response.front().get_signal<payload_chunk_header>().signal == payload_chunk_header::SIGNAL_WWATP_RESPONSE_CONTINUE,
+        require(response.front().get_signal<payload_chunk_header>().signal == payload_chunk_header::SIGNAL_WORLWIND_RESPONSE_CONTINUE,
                 "client callback received the wrong response signal");
         require(string(response.front().begin<const char>(), response.front().end<const char>()) == "ack",
                 "client callback received a corrupted response");
@@ -130,7 +130,7 @@ void runContractTest(const string& protocol, int port) {
     client->registerResponseHandler(first_id, client_handler);
 
     chunks request;
-    request.emplace_back(payload_chunk_header(first_id.logical_id, payload_chunk_header::SIGNAL_WWATP_REQUEST_CONTINUE,
+    request.emplace_back(payload_chunk_header(first_id.logical_id, payload_chunk_header::SIGNAL_WORLWIND_REQUEST_CONTINUE,
                                                static_cast<uint16_t>(expected.size())),
                          span<const char>(expected.data(), expected.size()));
     // The callback is the contract's producer; the first invocation creates the request.

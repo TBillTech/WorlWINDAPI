@@ -6,14 +6,14 @@
 #include "request.h"
 #include "frontend_base.h"
 
-// The journaling feature interfaces with the http3 server to request the latest list of notifications beyond the client's current.
+// The journaling feature interfaces with the stream server to request the latest list of notifications beyond the client's current.
 // Moreover, since the server does not push notifications, it will replay notifications up to some past limit whenever the client desires.
 
-class Http3ClientBackend : public Backend {
+class StreamClientBackend : public Backend {
 public:
     // Make sure blocking_mode is set to true if you want to block on the applyTransaction call, 
     // ESPECIALLY if you wrap this class in a TransactionalBackend.
-    Http3ClientBackend(Backend& local_backend, bool blocking_mode, 
+    StreamClientBackend(Backend& local_backend, bool blocking_mode, 
                        Request request, size_t journalRequestsPerMinute,
                        fplus::maybe<TreeNode> staticNode)
         : localBackend_(local_backend), lastNotification_({0, {}}), 
@@ -21,8 +21,8 @@ public:
           journalRequestsPerMinute_(journalRequestsPerMinute),
           staticNode_(staticNode) {
             lastJournalRequestTime_.store(0);
-            if ((staticNode_.is_just()) && request.isWWATP()) {
-                throw std::runtime_error("Static node must be used with static request (not WWATP).");
+            if ((staticNode_.is_just()) && request.isWorlWIND()) {
+                throw std::runtime_error("Static node must be used with static request (not WorlWIND).");
             }
             if ((staticNode_.is_just()) && journalRequestsPerMinute_ > 0) {
                 throw std::runtime_error("Static node mode should not be used with journaling.");
@@ -31,9 +31,9 @@ public:
                 requestStaticNodeData();
             }
           };
-    ~Http3ClientBackend() override = default;
+    ~StreamClientBackend() override = default;
 
-    Http3ClientBackend(Http3ClientBackend&& other) noexcept :
+    StreamClientBackend(StreamClientBackend&& other) noexcept :
         localBackend_(other.localBackend_),
         needMutablePageTreeSync_(other.needMutablePageTreeSync_),
         handlerMutex_(),
@@ -57,7 +57,7 @@ public:
         lastJournalRequestTime_.store(other.lastJournalRequestTime_.load());
     }
     // Delete copy constructor
-    Http3ClientBackend& operator=(const Http3ClientBackend&) = delete;
+    StreamClientBackend& operator=(const StreamClientBackend&) = delete;
 
     // Retrieve node by static url.
     fplus::maybe<TreeNode>& getStaticNode();
@@ -79,8 +79,8 @@ public:
     std::vector<TreeNode> relativeQueryNodes(const TreeNode& node, const std::string& label_rule) const override;
 
     // openTransactionLayer and closeTransactionLayers are passed through to the local backend, which is probably not transactional.
-    // For the ability to truly do transactions correctly with the server, the transaction layer should be ON TOP of this Http3ClientBackend.
-    // The Http3ClientBackend will then be responsible for sending the transaction to the server, and journaling changes.
+    // For the ability to truly do transactions correctly with the server, the transaction layer should be ON TOP of this StreamClientBackend.
+    // The StreamClientBackend will then be responsible for sending the transaction to the server, and journaling changes.
     bool openTransactionLayer(const TreeNode& node) override;
     bool closeTransactionLayers(void) override;
     // But applyTransaction will block, _waiting for the server to respond_ if this class is in blocking mode.
@@ -100,14 +100,14 @@ public:
     // Processing requests and responses are outside the backend interface.  
     // This is because worker threads need to be able to
     // synchronize the localBackend_ with the server and the journal.
-    void processHTTP3Response(HTTP3TreeMessage& response); 
+    void processStreamResponse(StreamTreeMessage& response); 
 
     bool hasNextRequest() const {
         std::lock_guard<std::mutex> lock(handlerMutex_);
         return !pendingRequests_.empty();
     }
-    HTTP3TreeMessage popNextRequest(); 
-    HTTP3TreeMessage solicitJournalRequest() const;
+    StreamTreeMessage popNextRequest(); 
+    StreamTreeMessage solicitJournalRequest() const;
     const Request getRequestUrlInfo() const { return requestUrlInfo_; }
 
     void requestFullTreeSync();
@@ -168,7 +168,7 @@ private:
 
     const Request requestUrlInfo_;
     
-    std::list<HTTP3TreeMessage> pendingRequests_;
+    std::list<StreamTreeMessage> pendingRequests_;
 
     size_t journalRequestsPerMinute_;
     atomic<double> lastJournalRequestTime_;
@@ -180,24 +180,24 @@ private:
 
 class Communication;
 
-class Http3ClientBackendUpdater : public Frontend {
+class StreamClientBackendUpdater : public Frontend {
     public:
-        Http3ClientBackendUpdater(string name, string ip_addr, uint16_t port) : name_(name), ip_addr_(ip_addr), port_(port) {}
-        ~Http3ClientBackendUpdater() = default;
+        StreamClientBackendUpdater(string name, string ip_addr, uint16_t port) : name_(name), ip_addr_(ip_addr), port_(port) {}
+        ~StreamClientBackendUpdater() = default;
 
         // Delete copy constructor and copy assignment operator
-        Http3ClientBackendUpdater(const Http3ClientBackendUpdater& other) = delete;
-        Http3ClientBackendUpdater& operator=(const Http3ClientBackendUpdater&) = delete;
+        StreamClientBackendUpdater(const StreamClientBackendUpdater& other) = delete;
+        StreamClientBackendUpdater& operator=(const StreamClientBackendUpdater&) = delete;
 
-        string getName() const override { return "Http3ClientBackendUpdater_" + name_ + "_" + ip_addr_ + "_" + to_string(port_); }
-        string getType() const override { return "http3_client_backend_updater"; }
+        string getName() const override { return "StreamClientBackendUpdater_" + name_ + "_" + ip_addr_ + "_" + to_string(port_); }
+        string getType() const override { return "stream_client_backend_updater"; }
 
         // Add a backend to the updater. This method should only be used with Request object that are tree urls.
         // Getting static assets at Request urls is done elsewhere.
         // NOTE: Please add all backends before calling maintainRequestHandlers.
-        Http3ClientBackend& addBackend(Backend& local_backend, bool blocking_mode, Request request, size_t journalRequestsPerMinute = 0, 
+        StreamClientBackend& addBackend(Backend& local_backend, bool blocking_mode, Request request, size_t journalRequestsPerMinute = 0, 
                                        fplus::maybe<TreeNode> staticNode = fplus::maybe<TreeNode>());
-        Http3ClientBackend& getBackend(const std::string& url);
+        StreamClientBackend& getBackend(const std::string& url);
         std::vector<Backend*> getBackends() override {
             std::vector<Backend*> backends;
             for (auto& backend : backends_) {
@@ -209,7 +209,7 @@ class Http3ClientBackendUpdater : public Frontend {
         // There can be multiple request streams per backend, so each new request
         // needs to get a new stream identifier from the quic connector, and then
         // establish the response handler which will be a wrapper of the
-        // HTTP3ClientBackend processRequestStream.
+        // StreamClientBackend processRequestStream.
         // This also will periodically solicit a journal request for the server (from each backend).
         void maintainRequestHandlers(Communication& connector, double time);
 
@@ -224,7 +224,7 @@ class Http3ClientBackendUpdater : public Frontend {
         //    }
         // 2. As a daemon thread, using the below function, which will create new thread 
         //    and do the above work until the stop flag is set to true.
-        // NOTE: Using the block mode of the Http3ClientBackend is most easily done in mode 2.
+        // NOTE: Using the block mode of the StreamClientBackend is most easily done in mode 2.
         void start(Communication& connector, double time, size_t sleep_milli = 100) override {
             stopFlag.store(false);
             updaterThread_ = thread([this, &connector, time, sleep_milli]() {
@@ -258,10 +258,10 @@ class Http3ClientBackendUpdater : public Frontend {
         string ip_addr_;
         uint16_t port_;
         // Track the backends which will be updated by this class.
-        std::list<Http3ClientBackend> backends_;
+        std::list<StreamClientBackend> backends_;
 
-        std::map<StreamIdentifier, HTTP3TreeMessage> ongoingRequests_;
-        std::map<StreamIdentifier, Http3ClientBackend&> journalingRequests_;
+        std::map<StreamIdentifier, StreamTreeMessage> ongoingRequests_;
+        std::map<StreamIdentifier, StreamClientBackend&> journalingRequests_;
         double lastTime_ = 0.0;
 
         std::list<StreamIdentifier> completeRequests_;
