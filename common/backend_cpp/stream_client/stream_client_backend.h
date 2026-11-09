@@ -2,7 +2,7 @@
 
 #include "backend.h"
 #include "communication.h"
-#include "http3_tree_message.h"
+#include "stream_tree_message.h"
 #include "request.h"
 #include "frontend_base.h"
 

@@ -1,6 +1,6 @@
 #include <vector>
 
-#include "http3_tree_message.h"
+#include "stream_tree_message.h"
 
 void HTTP3TreeMessage::encode_getNodeRequest(const std::string& label_rule) {
     if (isInitialized_) {

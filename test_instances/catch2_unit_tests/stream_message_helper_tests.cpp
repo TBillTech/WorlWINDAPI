@@ -1,5 +1,5 @@
 #include <catch2/catch_all.hpp>
-#include "http3_tree_message_helpers.h"
+#include "stream_tree_message_helpers.h"
 #include "backend_testbed.h"
 
 void test_encode_decode_label(uint16_t request_id, uint8_t signal, const std::string& label) {

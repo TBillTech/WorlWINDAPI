@@ -1,5 +1,5 @@
 #include <catch2/catch_all.hpp>
-#include "http3_tree_message.h"
+#include "stream_tree_message.h"
 #include "backend_testbed.h"
 
 using namespace std;

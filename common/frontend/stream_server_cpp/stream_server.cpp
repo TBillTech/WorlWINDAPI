@@ -1,5 +1,5 @@
-#include "http3_tree_message.h"
-#include "http3_server.h"
+#include "stream_tree_message.h"
+#include "stream_server.h"
 
 chunks Http3ServerRoute::processResponseStream(const StreamIdentifier& stream_id, chunks& request) {
     chunks response;

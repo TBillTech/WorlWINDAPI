@@ -86,9 +86,9 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/common/backend_cpp/memory/include
     ${PROJECT_SOURCE_DIR}/common/transport/include 
     ${PROJECT_SOURCE_DIR}/common/backend_cpp/structure
-    ${PROJECT_SOURCE_DIR}/common/backend_cpp/http3_client
+    ${PROJECT_SOURCE_DIR}/common/backend_cpp/stream_client
     ${PROJECT_SOURCE_DIR}/common/backend_cpp/file
-    ${PROJECT_SOURCE_DIR}/common/frontend/http3_server_cpp
+    ${PROJECT_SOURCE_DIR}/common/frontend/stream_server_cpp
     ${PROJECT_SOURCE_DIR}/common/frontend/backend_tester_cpp
     ${PROJECT_SOURCE_DIR}/common/frontend/mediator_cpp
     ${PROJECT_SOURCE_DIR}/common/frontend/wwatp_service_cpp
@@ -111,13 +111,13 @@ set(COMMON_SOURCES
     ${PROJECT_SOURCE_DIR}/common/backend_cpp/memory/src/transactional_backend.cpp
     ${PROJECT_SOURCE_DIR}/common/backend_cpp/structure/composite_backend.cpp
     ${PROJECT_SOURCE_DIR}/common/backend_cpp/structure/redirected_backend.cpp
-    ${PROJECT_SOURCE_DIR}/common/backend_cpp/http3_client/http3_client_backend.cpp
-    ${PROJECT_SOURCE_DIR}/common/backend_cpp/interface/http3_tree_message.cpp
-    ${PROJECT_SOURCE_DIR}/common/backend_cpp/interface/http3_tree_message_helpers.cpp
+    ${PROJECT_SOURCE_DIR}/common/backend_cpp/stream_client/stream_client_backend.cpp
+    ${PROJECT_SOURCE_DIR}/common/backend_cpp/interface/stream_tree_message.cpp
+    ${PROJECT_SOURCE_DIR}/common/backend_cpp/interface/stream_tree_message_helpers.cpp
     ${PROJECT_SOURCE_DIR}/common/backend_cpp/file/file_backend.cpp
     ${PROJECT_SOURCE_DIR}/common/backend_cpp/file/directory_watcher.cpp
     ${PROJECT_SOURCE_DIR}/common/backend_cpp/file/inotify_directory_watcher.cpp
-    ${PROJECT_SOURCE_DIR}/common/frontend/http3_server_cpp/http3_server.cpp
+    ${PROJECT_SOURCE_DIR}/common/frontend/stream_server_cpp/stream_server.cpp
     ${PROJECT_SOURCE_DIR}/common/frontend/mediator_cpp/cloning_mediator.cpp
     ${PROJECT_SOURCE_DIR}/common/frontend/mediator_cpp/yaml_mediator.cpp
 )
@@ -135,12 +135,12 @@ add_executable(communicate_tester ${COMMON_SOURCES} test_instances/communicate_t
 add_executable(memory_pool_tester ${COMMON_SOURCES} test_instances/memory_pool_tester/memory_pool_tester.cpp)
 add_executable(catch2_unit_tests
     ${COMMON_SOURCES}
-    test_instances/catch2_unit_tests/http3_message_tests.cpp
+    test_instances/catch2_unit_tests/stream_message_tests.cpp
     test_instances/catch2_unit_tests/shared_chunk_tests.cpp
     test_instances/catch2_unit_tests/backend_cpp_tests.cpp
     test_instances/catch2_unit_tests/backend_testbed.cpp
     test_instances/catch2_unit_tests/directory_watcher_tests.cpp
-    test_instances/catch2_unit_tests/http3_message_helper_tests.cpp
+    test_instances/catch2_unit_tests/stream_message_helper_tests.cpp
     test_instances/catch2_unit_tests/frontend_cpp_tests.cpp
     test_instances/catch2_unit_tests/yaml_tests.cpp
     test_instances/catch2_unit_tests/tree_node_tests.cpp

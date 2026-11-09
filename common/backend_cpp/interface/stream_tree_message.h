@@ -4,7 +4,7 @@
 #include "shared_chunk.h"
 #include "tree_node.h"
 #include "backend.h"
-#include "http3_tree_message_helpers.h"
+#include "stream_tree_message_helpers.h"
 
 constexpr const string& get_signal_string(uint8_t signal);
 
