@@ -34,6 +34,7 @@ using namespace std;
 //
 // This design allows the server to efficiently manage multiple connections and streams, with each Handler object managing a single connection and each Stream object managing a single stream within that connection.
 
+#ifndef WWATP_USE_QUIC_TRANSPORT
 const size_t NGTCP2_MAX_CIDLEN = 8; 
 
 struct ngtcp2_cid {
@@ -47,6 +48,13 @@ bool operator>=(ngtcp2_cid const &cid_A, ngtcp2_cid const &cid_B);
 bool operator==(ngtcp2_cid const &cid_A, ngtcp2_cid const &cid_B);
 bool operator<(ngtcp2_cid const &cid_A, ngtcp2_cid const &cid_B);
 bool operator>(ngtcp2_cid const &cid_A, ngtcp2_cid const &cid_B);
+
+#else
+#include "config_base.h"
+#include "util.h"
+
+using namespace ngtcp2;
+#endif
 
 class StreamIdentifier {
     public:

@@ -1,5 +1,6 @@
 #include "communication.h"
 
+#ifndef WWATP_USE_QUIC_TRANSPORT
 constexpr char LOWER_XDIGITS[] = "0123456789abcdef";
 
 string format_hex(uint8_t c) {
@@ -67,3 +68,4 @@ bool operator>(ngtcp2_cid const &cid_A, ngtcp2_cid const &cid_B)
 {
     return !(cid_A <= cid_B);
 }
+#endif

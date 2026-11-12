@@ -64,14 +64,6 @@ foreach(WORLWIND_HAVE_VAR
   endif()
 endforeach()
 
-# pthread_rwlock_t on Linux requires a feature flag. We limit this to Linux
-# because, on Apple platforms, it instead disables APIs we use. See compat(5)
-# and sys/cdefs.h. Reportedly, FreeBSD also breaks when this is set. See
-# https://crbug.com/boringssl/471.
-#if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-#  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_XOPEN_SOURCE=700")
-#endif()
-
 # cd libraries
 # git clone https://github.com/Dobiasd/FunctionalPlus
 # cmake -S FunctionalPlus -B FunctionalPlus/build
@@ -147,37 +139,6 @@ add_executable(catch2_unit_tests
 
 # Define preprocessor macros
 
-include(ProcessorCount)
-ProcessorCount(WORLWIND_PROCESSOR_COUNT)
-if(NOT WORLWIND_PROCESSOR_COUNT)
-  set(WORLWIND_PROCESSOR_COUNT 1)
-endif()
-
-set(WORLWIND_DEP_MAKE_PROGRAM "${CMAKE_MAKE_PROGRAM}")
-get_filename_component(WORLWIND_MAKE_PROGRAM_NAME "${WORLWIND_DEP_MAKE_PROGRAM}" NAME)
-string(TOLOWER "${WORLWIND_MAKE_PROGRAM_NAME}" WORLWIND_MAKE_PROGRAM_NAME_LOWER)
-
-# On MinGW, invoking mingw32-make.exe directly as a Windows process (rather than from an
-# MSYS2 shell) breaks the autotools/libtool recipes for nghttp3/ngtcp2 (their generated
-# shell functions like `fail`/`eval` are misinterpreted), and parallel jobs (-j) have also
-# been observed to corrupt recipe shells under this make. Route the build through MSYS2's
-# bash (via scripts/mingw-dep-build.sh, which also normalizes generated-file timestamps to
-# avoid automake's auto-remake rule) and build serially there.
-if(MINGW)
-  find_program(WORLWIND_MSYS2_BASH NAMES bash REQUIRED)
-  set(WORLWIND_DEP_MAKE_JOBS_FLAG "")
-  set(WORLWIND_MINGW_DEP_BUILD_SCRIPT "${PROJECT_SOURCE_DIR}/scripts/mingw-dep-build.sh")
-  set(WORLWIND_NGHTTP3_BUILD_COMMAND ${WORLWIND_MSYS2_BASH} ${WORLWIND_MINGW_DEP_BUILD_SCRIPT} ${WORLWIND_DEP_MAKE_PROGRAM})
-  set(WORLWIND_NGTCP2_BUILD_COMMAND ${WORLWIND_MSYS2_BASH} ${WORLWIND_MINGW_DEP_BUILD_SCRIPT} ${WORLWIND_DEP_MAKE_PROGRAM})
-else()
-  set(WORLWIND_DEP_MAKE_JOBS_FLAG "-j${WORLWIND_PROCESSOR_COUNT}")
-  set(WORLWIND_NGHTTP3_BUILD_COMMAND ${WORLWIND_DEP_MAKE_PROGRAM} ${WORLWIND_DEP_MAKE_JOBS_FLAG})
-  set(WORLWIND_NGTCP2_BUILD_COMMAND ${WORLWIND_DEP_MAKE_PROGRAM} ${WORLWIND_DEP_MAKE_JOBS_FLAG})
-endif()
-
-set(WORLWIND_LIB_PREFIX "${CMAKE_STATIC_LIBRARY_PREFIX}")
-set(WORLWIND_LIB_SUFFIX "${CMAKE_STATIC_LIBRARY_SUFFIX}")
-
 include(FetchContent)
 FetchContent_Declare(
   Catch2
@@ -212,4 +173,3 @@ target_link_libraries(catch2_unit_tests PRIVATE ${WORLWIND_COMMON_LINK_LIBS} ${W
 enable_testing()
 catch_discover_tests(catch2_unit_tests)
 add_test(NAME communicate_tester COMMAND communicate_tester)
-
