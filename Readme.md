@@ -113,7 +113,7 @@ Here are some examples:
 * A game client composed of an unreal_engine frontend using an stream_client backend_cpp which connects to a javascript QUICSidecar.
 * A game server composed of an stream_server_cpp frontend and a postgres backend_cpp.
 * A web application:
-    * A browser dom_link_javascript frontend using an http3_client backend_js.
+    * A browser dom_link_javascript frontend using an stream_client backend_js.
     * Static assets (including CSS and javascript libraries) served by the QUICRouter which maps static asset requests to cached data, while the QUICRouter refereshes and loads static mapped assets from upstream WorlWIND servers (using stream_server connections). 
 
 The following backends are tested in the project:
