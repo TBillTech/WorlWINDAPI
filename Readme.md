@@ -103,7 +103,11 @@ Implementations should honor several common version conflict policies:
 
 The WorlWINDAPI provides a stream multiplexing socket for transport, as well as a c FFI. QUIC and HTTP3 communication is implemented in c++ for linux in the WorlWINDQUIC repository (not this one).  The WorlWINDQUIC repo supports, for example, different branches of the tree being sent either whole or in part to multiple other agents simultaneously. 
 
-The communication.h defines the abstract API required by a concrete communication implementation. The communicate_tester tests the compliance with the base contract.
+The communication.h defines the abstract API required by a concrete communication implementation. The communicate_tester tests the compliance with the base contract. The main network layer communication for WorlWINDAPI (and any application built upon it) is the SocketCommunication, which emulates the logical streams over TCP.
+
+Currently, we do not have plans to implement a communication class over UDP, since this implies implementing a layer which _uses_ UDP, and still provides the same contract to the higher levels of the WorlWIND Protocol. This appears to be re-inventing much of QUIC. It is possible in principle to reimplement something like QUIC on UDP, especially if there is a specific use case that really calls for it, but this would be a "Major Optimization". There is an argument that states we do not need the QuicSidecar to be especially optimized and fast on the client side, since it is bottlnecked by consumer internet hardware. This argument also applies equally to an imagined UDP communcation layer, which would only be justified by optimizing the speed of that layer. Instead, if you need that much point-to-point data transfer optimization, just use direct ffi.
+
+So the bottom line is, a UDPCommunication layer would make sense exactly when 100 Gb/s network utilization was both available and necessary for the application, which is a highly specialized case (and by the way, can be implemented in this architecture if ultimately desired).
 
 ## Backends, Frontends, and how they are composed
 
